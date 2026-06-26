@@ -1,4 +1,4 @@
-import { GeometryManager } from './tab2Geometry.js?v=50';
+import { GeometryManager } from './tab2Geometry.js?v=53';
 
 export const AnalysisManager = {
     container: null,
@@ -401,3 +401,4 @@ export const AnalysisManager = {
         Plotly.newPlot(this.plotContainer, traces, layout, { responsive: true, displaylogo: false });
     }
 };
+

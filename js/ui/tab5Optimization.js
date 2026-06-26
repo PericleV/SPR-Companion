@@ -1,6 +1,6 @@
-import { GeometryManager } from './tab2Geometry.js?v=50';
-import { MaterialsDB } from '../core/materials_database.js?v=50';
-import { evaluateTargetModel, Evaluator } from '../core/geneticAlgo.js?v=50';
+import { GeometryManager } from './tab2Geometry.js?v=53';
+import { MaterialsDB } from '../core/materials_database.js?v=53';
+import { evaluateTargetModel, Evaluator } from '../core/geneticAlgo.js?v=53';
 
 export const OptimizationManager = {
     worker: null,
@@ -19,19 +19,7 @@ export const OptimizationManager = {
     targetComponentsMap: {},
     currentTargetMetric: null,
 
-    syncMaterialsDB() {
-        try {
-            const savedDB = localStorage.getItem('plasmonic_materials');
-            if (savedDB) {
-                const parsed = JSON.parse(savedDB);
-                const predefined = ['BK7', 'SiO2', 'TiO2', 'Air', 'H2O', 'Au', 'Ag', 'Graphene'];
-                for (const key in MaterialsDB) {
-                    if (!predefined.includes(key)) delete MaterialsDB[key];
-                }
-                Object.assign(MaterialsDB, parsed); 
-            }
-        } catch (e) { console.error("Error synchronizing MaterialsDB in Tab5:", e); }
-    },
+    syncMaterialsDB() {},
 
     init() {
         this.container = document.getElementById('optimization-container');
@@ -250,7 +238,7 @@ export const OptimizationManager = {
                         <div style="margin-bottom: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <h3 style="color: var(--accent-green); margin: 0; font-size: 1.05rem;"><i class="fa-solid fa-chart-bar"></i> 1. Metrics (Variables M)</h3>
-                                <button id="btn-add-metric" style="background: var(--accent-green); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;"><i class="fa-solid fa-plus"></i> Metric</button>
+                                <button id="btn-add-metric" style="background: var(--accent-green); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; width: 115px; display: inline-flex; justify-content: center; align-items: center; gap: 4px; box-sizing: border-box;"><i class="fa-solid fa-plus"></i> Metric</button>
                             </div>
                             <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px;">Define spectrum measurements to use in formulas (e.g., M1, M2).</p>
                             <div id="opt-metrics-list" style="display: flex; flex-direction: column; gap: 8px;">
@@ -261,7 +249,7 @@ export const OptimizationManager = {
                         <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <h3 style="color: var(--accent-blue); margin: 0; font-size: 1.05rem;"><i class="fa-solid fa-bullseye"></i> 2. Global Objectives</h3>
-                                <button id="btn-add-global-obj" style="background: var(--accent-blue); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; display: none;"><i class="fa-solid fa-plus"></i> Objective</button>
+                                <button id="btn-add-global-obj" style="background: var(--accent-blue); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; width: 115px; display: none; justify-content: center; align-items: center; gap: 4px; box-sizing: border-box;"><i class="fa-solid fa-plus"></i> Objective</button>
                             </div>
                             <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px;">Combine metrics via formulas (e.g., <code>M1 * 0.5 + M2</code>, or <code>M2 / M1</code> for Figure of Merit).</p>
                             <div id="opt-global-obj-list" style="display: flex; flex-direction: column; gap: 8px;">
@@ -272,7 +260,7 @@ export const OptimizationManager = {
                         <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; margin-top: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <h3 class="text-danger" style="margin: 0; font-size: 1.05rem;"><i class="fa-solid fa-lock"></i> 3. Constraints (Optional)</h3>
-                                <button id="btn-add-constraint" class="bg-danger" style="color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;"><i class="fa-solid fa-plus"></i> Constraint</button>
+                                <button id="btn-add-constraint" class="bg-danger" style="color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; width: 115px; display: inline-flex; justify-content: center; align-items: center; gap: 4px; box-sizing: border-box;"><i class="fa-solid fa-plus"></i> Constraint</button>
                             </div>
                             <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px;">Strict boundary rules (e.g., <code>M1 < 0.1</code>). Non-compliant solutions receive a fitness penalty.</p>
                             <div id="opt-constraints-list" style="display: flex; flex-direction: column; gap: 8px;">
@@ -805,6 +793,8 @@ export const OptimizationManager = {
                         <option value="Sensitivity">Sensitivity (S)</option>
                         <option value="FOM">Figure of Merit (FOM)</option>
                         <option value="ResonancePosition">Resonance Position (Dip/Peak)</option>
+                        <option value="BandCenter">Band Center (DBR)</option>
+                        <option value="BandgapWidth">Bandgap Width (DBR)</option>
                         <option value="MaxPhaseDerivativeR">Max Phase Derivative (R)</option>
                         <option value="MaxPhaseDerivativeT">Max Phase Derivative (T)</option>
                         <option value="curvefit">Curve Match Penalty (Error)</option>
@@ -850,7 +840,7 @@ export const OptimizationManager = {
             if (type === 'curvefit') curvefitDiv.style.display = 'flex';
             else curvefitDiv.style.display = 'none';
 
-            if (type === 'FWHM' || type === 'Sensitivity' || type === 'FOM' || type === 'curvefit') {
+            if (type === 'Sensitivity' || type === 'FOM' || type === 'curvefit') {
                 intervalDiv.style.display = 'none';
                 intervalDiv.innerHTML = `<input type="hidden" class="metric-xmin" value="0"><input type="hidden" class="metric-xmax" value="0">`;
             } else {
@@ -1024,7 +1014,7 @@ export const OptimizationManager = {
         let comp = { id, type };
         
         if (type === 'step') {
-            comp.xmin = 40; comp.xmax = 50; comp.yval = 0; comp.ybase = 1; comp.stepGoal = 'maximize';
+            comp.xmin = 40; comp.xmax = 50; comp.yval = 0; comp.ybase = 1;
         } else if (type === 'lorentz') {
             comp.y0 = 1; comp.A = -1; comp.xc = 45; comp.w = 2;
         } else if (type === 'fano') {
@@ -1056,20 +1046,10 @@ export const OptimizationManager = {
             
             Object.keys(c).forEach(key => {
                 if (key !== 'id' && key !== 'type') {
-                    if (key === 'stepGoal') {
-                        html += `<div style="display:flex; flex-direction:column; flex: 1; min-width: 80px;">
-                            <span class="text-muted" style="font-size:0.7rem;">In-Band Action:</span>
-                            <select class="target-param-select" data-id="${c.id}" data-key="${key}" style="padding:4px; background:var(--bg-main); color: var(--text-main); border:1px solid var(--border-color); border-radius: 4px; font-size: 0.8rem;" title="Choose how the error is penalized inside this step">
-                                <option value="maximize" ${c[key] === 'maximize' ? 'selected' : ''}>Maximize Area (Negative Penalty)</option>
-                                <option value="minimize" ${c[key] === 'minimize' ? 'selected' : ''}>Minimize Area (Positive Penalty)</option>
-                            </select>
-                        </div>`;
-                    } else {
-                        html += `<div style="display:flex; flex-direction:column; flex: 1; min-width: 60px;">
-                            <span class="text-muted" style="font-size:0.7rem;">${key}:</span>
-                            <input type="number" class="target-param-input" data-id="${c.id}" data-key="${key}" value="${c[key]}" step="0.1" style="padding:4px; background:var(--bg-main); color: var(--text-main); border:1px solid var(--border-color); border-radius: 4px;">
-                        </div>`;
-                    }
+                    html += `<div style="display:flex; flex-direction:column; flex: 1; min-width: 60px;">
+                        <span class="text-muted" style="font-size:0.7rem;">${key}:</span>
+                        <input type="number" class="target-param-input" data-id="${c.id}" data-key="${key}" value="${c[key]}" step="0.1" style="padding:4px; background:var(--bg-main); color: var(--text-main); border:1px solid var(--border-color); border-radius: 4px;">
+                    </div>`;
                 }
             });
             html += `</div></div>`;
@@ -1238,7 +1218,8 @@ export const OptimizationManager = {
 
         let baseLayers = JSON.parse(JSON.stringify(GeometryManager.layers));
         if (hasDBROpt) {
-            baseLayers = [baseLayers[0], baseLayers[baseLayers.length - 1]];
+            const numDBRLayers = GeometryManager.dbrParams.periods * GeometryManager.dbrParams.materials.length + (GeometryManager.dbrParams.hasDefect ? 1 : 0);
+            baseLayers.splice(baseLayers.length - 1 - numDBRLayers, numDBRLayers);
         }
 
         const processedLayers = baseLayers.map(layer => {
@@ -1343,6 +1324,12 @@ export const OptimizationManager = {
             if (!go.formula.trim()) return alert("Global objective formulas cannot be empty!");
         }
 
+        // Save current configuration to localStorage so the Geometry diff banner knows the EXACT structure that was optimized
+        const currentName = GeometryManager.currentConfigName || 'Configuration 1';
+        const configs = JSON.parse(localStorage.getItem('plasmonic_configs') || '{}');
+        configs[currentName] = JSON.parse(JSON.stringify(GeometryManager.layers));
+        localStorage.setItem('plasmonic_configs', JSON.stringify(configs));
+
         this.switchRightTab('rezultate', document.getElementById('btn-tab-rezultate'));
 
         document.getElementById('opt-final-parameters').style.display = 'none';
@@ -1427,7 +1414,7 @@ export const OptimizationManager = {
 
     calculateInitialResponse(config) {
         return new Promise((resolve) => {
-            const tempWorker = new Worker('./js/workers/tmm.worker.js?v=50', { type: 'module' });
+            const tempWorker = new Worker('./js/workers/tmm.worker.js?v=53', { type: 'module' });
             
             let initialLayers = config.processedLayers;
             if (config.isDBROpt && config.dbrParams) {
@@ -1487,7 +1474,7 @@ export const OptimizationManager = {
     },
 
     startWorker(config) {
-        this.worker = new Worker('./js/workers/optimization.worker.js?v=50', { type: 'module' });
+        this.worker = new Worker('./js/workers/optimization.worker.js?v=53', { type: 'module' });
         
         this.worker.onerror = (e) => {
             if (this.updateInterval) clearInterval(this.updateInterval);
@@ -1664,6 +1651,12 @@ export const OptimizationManager = {
                 if (g.param.startsWith('d_mat_')) {
                     const matName = g.param.replace('d_mat_', '');
                     GeometryManager.layers.forEach(l => { if (l.material === matName && l.type !== '2d') l.d = parseFloat(g.val); });
+                    if (GeometryManager.dbrParams) {
+                        GeometryManager.dbrParams.materials.forEach(m => { if (m.material === matName) m.d = parseFloat(g.val); });
+                        if (GeometryManager.dbrParams.hasDefect && GeometryManager.dbrParams.defect.material === matName) {
+                            GeometryManager.dbrParams.defect.d = parseFloat(g.val);
+                        }
+                    }
                     return; // skip individual layer
                 }
                 const layer = GeometryManager.layers[g.layerIndex];
@@ -2103,3 +2096,6 @@ export const OptimizationManager = {
 
     }
 };
+
+
+

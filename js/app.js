@@ -1,13 +1,15 @@
-import { MaterialsManager } from './ui/tab1Materials.js?v=50';
-import { GeometryManager } from './ui/tab2Geometry.js?v=50';
-import { SimulationManager } from './ui/tab3Simulation.js?v=50';
-import { SweepManager } from './ui/tab4Sweep.js?v=50';
-import { OptimizationManager } from './ui/tab5Optimization.js?v=50';
-import { WorkspaceManager } from './ui/workspaceManager.js?v=50';
+import { MaterialsManager } from './ui/tab1Materials.js?v=53';
+import { GeometryManager } from './ui/tab2Geometry.js?v=53';
+import { SimulationManager } from './ui/tab3Simulation.js?v=53';
+import { SweepManager } from './ui/tab4Sweep.js?v=53';
+import { OptimizationManager } from './ui/tab5Optimization.js?v=53';
+import { WorkspaceManager } from './ui/workspaceManager.js?v=53';
+import { initMaterialsDB } from './core/materials_database.js?v=53';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     
     console.log("🚀 Initializing SPR Companion...");
+    await initMaterialsDB();
 
     // Initialize Global Registry Buffers
     window.PlotRegistry = window.PlotRegistry || {};
@@ -78,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // 1. Initialize Web Workers
-    const tmmWorker = new Worker('./js/workers/tmm.worker.js?v=50', { type: 'module' });
+    const tmmWorker = new Worker('./js/workers/tmm.worker.js?v=53', { type: 'module' });
     tmmWorker.onmessage = function(e) {
         if (e.data.type === 'error') {
             console.error("TMM Worker Exception:", e.data.stack);
@@ -91,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     tmmWorker.onerror = (err) => console.error("TMM Worker Error:", err);
 
-    const sweepWorker = new Worker('./js/workers/sweep.worker.js?v=50', { type: 'module' });
+    const sweepWorker = new Worker('./js/workers/sweep.worker.js?v=53', { type: 'module' });
     sweepWorker.onmessage = function(e) {
         if (['resultSweep', 'sweepProgress', 'sweepDone'].includes(e.data.type) && typeof SweepManager.handleWorkerResult === 'function') {
             SweepManager.handleWorkerResult(e.data);
@@ -330,3 +332,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+

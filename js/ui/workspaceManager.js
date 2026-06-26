@@ -1,6 +1,6 @@
-import { GeometryManager } from './tab2Geometry.js?v=50';
-import { MaterialsDB } from '../core/materials_database.js?v=50';
-import { OptimizationManager } from './tab5Optimization.js?v=50';
+import { GeometryManager } from './tab2Geometry.js?v=53';
+import { MaterialsDB } from '../core/materials_database.js?v=53';
+import { OptimizationManager } from './tab5Optimization.js?v=53';
 
 export const WorkspaceManager = {
     
@@ -25,7 +25,7 @@ export const WorkspaceManager = {
                 if(!file) return;
                 const reader = new FileReader();
                 reader.onload = (ev) => {
-                    this.importWorkspace(ev.target.result);
+                    this.importWorkspace(ev.target.result, file.name);
                     // reset input
                     inputLoad.value = '';
                 };
@@ -44,14 +44,18 @@ export const WorkspaceManager = {
             materials: JSON.parse(localStorage.getItem('plasmonic_materials')) || {} // Save custom imported ones
         };
 
+        const nameInput = document.getElementById('config-name-input');
+        const configName = nameInput && nameInput.value.trim() !== '' ? nameInput.value.trim() : "spr_geometry";
+        const fileName = configName.replace(/[^a-z0-9_-]/gi, '_') + ".json";
+
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
         const dlAnchorElem = document.createElement('a');
         dlAnchorElem.setAttribute("href", dataStr);
-        dlAnchorElem.setAttribute("download", "spr_geometry.json");
+        dlAnchorElem.setAttribute("download", fileName);
         dlAnchorElem.click();
     },
 
-    importWorkspace(fileData) {
+    importWorkspace(fileData, fileName = "") {
         try {
             const config = JSON.parse(fileData);
 
@@ -91,6 +95,14 @@ export const WorkspaceManager = {
                 }, 100);
             }
 
+            // Update config name based on file name
+            const nameInput = document.getElementById('config-name-input');
+            if (nameInput && fileName) {
+                const baseName = fileName.replace('.json', '');
+                nameInput.value = baseName;
+                document.dispatchEvent(new Event('geometryUpdated'));
+            }
+
             alert("Geometry configuration loaded successfully!");
 
         } catch (e) {
@@ -99,3 +111,5 @@ export const WorkspaceManager = {
         }
     }
 };
+
+

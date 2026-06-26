@@ -1,3 +1,5 @@
+import { DefaultMaterials } from '../data/default_materials.js?v=53';
+import { MaterialsDB } from '../core/materials_database.js?v=53';
 import { MaterialFormulas } from '../physics/materialsFormulas.js';
 
 // --- Complex Numbers Helpers (needed for EMA Bruggeman/MG calculations) ---
@@ -111,7 +113,7 @@ export const MaterialsManager = {
 
     saveToStorage() {
         const customMats = {};
-        const predefined = ['BK7', 'SiO2', 'TiO2', 'Air', 'H2O', 'Au', 'Ag', 'Graphene'];
+        const predefined = Object.keys(DefaultMaterials);
         for (const [key, val] of Object.entries(this.db)) {
             if (!predefined.includes(key)) customMats[key] = val;
         }
@@ -136,6 +138,15 @@ export const MaterialsManager = {
                         <button id="btn-show-add-modal" style="width: 100%; background: var(--accent-green); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;">
                             <i class="fa-solid fa-plus"></i> New Material
                         </button>
+                        <div style="display: flex; gap: 8px;">
+                            <button id="btn-export-mat" style="flex: 1; background: var(--bg-card-hover); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: 0.2s;" title="Export Selected Material">
+                                <i class="fa-solid fa-file-export"></i> Export
+                            </button>
+                            <input type="file" id="btn-import-mat-file" accept=".json" style="display: none;">
+                            <button id="btn-import-mat" style="flex: 1; background: var(--bg-card-hover); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: 0.2s;" title="Import Material (JSON)">
+                                <i class="fa-solid fa-file-import"></i> Import
+                            </button>
+                        </div>
                         <button id="btn-delete-selected-mat-sidebar" style="width: 100%; background: transparent; color: var(--text-danger, #ff4c4c); border: 1px solid var(--text-danger, #ff4c4c); padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; display: none;">
                             <i class="fa-solid fa-trash-can"></i> Delete Selected Material
                         </button>
@@ -419,7 +430,7 @@ export const MaterialsManager = {
         const btnDigi = document.getElementById('btn-open-digitizer');
         if (btnDigi) {
             btnDigi.addEventListener('click', () => {
-                window.open('digitizer.html?v=37', 'ImageDigitizer', 'width=1100,height=750,resizable=yes');
+                window.open('digitizer.html?v=53', 'ImageDigitizer', 'width=1100,height=750,resizable=yes');
             });
         }
         
@@ -446,8 +457,8 @@ export const MaterialsManager = {
         document.getElementById('mat-list-container').addEventListener('click', (e) => {
             const btn = e.target.closest('.mat-list-item');
             if (btn) {
+                const matKey = btn.dataset.mat;
                 if (e.target.classList.contains('mat-plot-toggle')) {
-                    const matKey = e.target.dataset.mat;
                     if (e.target.checked) this.plottedMaterials.add(matKey);
                     else this.plottedMaterials.delete(matKey);
                     
@@ -455,15 +466,28 @@ export const MaterialsManager = {
                     return; 
                 }
 
-                this.selectedMaterial = btn.dataset.mat;
+                this.selectedMaterial = matKey;
+                
+                if (e.ctrlKey || e.metaKey) {
+                    if (this.plottedMaterials.has(matKey)) {
+                        this.plottedMaterials.delete(matKey);
+                    } else {
+                        this.plottedMaterials.add(matKey);
+                    }
+                } else {
+                    this.plottedMaterials.clear();
+                    this.plottedMaterials.add(matKey);
+                }
+
                 this.renderMaterialList();
                 this.viewMaterial(this.selectedMaterial);
+                this.plotDispersion();
             }
         });
 
         // Delete Material
         document.getElementById('btn-delete-mat').addEventListener('click', () => {
-            const predefined = ['BK7', 'SiO2', 'TiO2', 'Air', 'H2O', 'Au', 'Ag', 'Graphene'];
+            const predefined = Object.keys(DefaultMaterials);
             if (predefined.includes(this.selectedMaterial)) return alert("Cannot delete a system predefined material.");
             
             if(confirm(`Are you sure you want to delete material ${this.selectedMaterial}?`)) {
@@ -482,11 +506,57 @@ export const MaterialsManager = {
             }
         });
 
+        // Export/Import Materials
+        document.getElementById('btn-export-mat').addEventListener('click', () => {
+            if (!this.selectedMaterial || !this.db[this.selectedMaterial]) return alert("Please select a material to export.");
+            const exportData = { [this.selectedMaterial]: this.db[this.selectedMaterial] };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 4));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `material_${this.selectedMaterial}.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        });
+
+        document.getElementById('btn-import-mat').addEventListener('click', () => {
+            document.getElementById('btn-import-mat-file').click();
+        });
+
+        document.getElementById('btn-import-mat-file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    let count = 0;
+                    for (let key in imported) {
+                        if (typeof imported[key] === 'object' && imported[key].type) {
+                            this.db[key] = imported[key];
+                            count++;
+                        }
+                    }
+                    if (count > 0) {
+                        this.saveToStorage();
+                        this.renderMaterialList();
+                        alert(`Successfully imported ${count} material(s).`);
+                    } else {
+                        alert("Invalid material JSON format.");
+                    }
+                } catch (err) {
+                    alert("Error parsing JSON file.");
+                }
+                e.target.value = ''; // reset
+            };
+            reader.readAsText(file);
+        });
+
         // Delete Selected Material (Sidebar button)
         const btnDeleteSidebar = document.getElementById('btn-delete-selected-mat-sidebar');
         if (btnDeleteSidebar) {
             btnDeleteSidebar.addEventListener('click', () => {
-                const predefined = ['BK7', 'SiO2', 'TiO2', 'Air', 'H2O', 'Au', 'Ag', 'Graphene'];
+                const predefined = Object.keys(DefaultMaterials);
                 if (predefined.includes(this.selectedMaterial)) return alert("Cannot delete a system predefined material.");
                 
                 if(confirm(`Are you sure you want to delete material ${this.selectedMaterial}?`)) {
@@ -707,7 +777,7 @@ export const MaterialsManager = {
 
         document.getElementById('mat-view-title').innerText = matKey;
         
-        const predefined = ['BK7', 'SiO2', 'TiO2', 'Air', 'H2O', 'Au', 'Ag', 'Graphene'];
+        const predefined = Object.keys(DefaultMaterials);
         const isCustom = !predefined.includes(matKey);
         
         const btnDelete = document.getElementById('btn-delete-mat');
@@ -1265,3 +1335,7 @@ export const MaterialsManager = {
         }
     }
 };
+
+
+
+

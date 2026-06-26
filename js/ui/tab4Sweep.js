@@ -1,23 +1,11 @@
-import { GeometryManager } from './tab2Geometry.js?v=50';
-import { MaterialsDB } from '../core/materials_database.js?v=50';
+import { GeometryManager } from './tab2Geometry.js?v=53';
+import { MaterialsDB } from '../core/materials_database.js?v=53';
 
 export const SweepManager = {
     worker: null,
     lastSweepData: null,
 
-    syncMaterialsDB() {
-        try {
-            const savedDB = localStorage.getItem('plasmonic_materials');
-            if (savedDB) {
-                const parsed = JSON.parse(savedDB);
-                const predefined = ['BK7', 'SiO2', 'TiO2', 'Air', 'H2O', 'Au', 'Ag', 'Graphene'];
-                for (const key in MaterialsDB) {
-                    if (!predefined.includes(key)) delete MaterialsDB[key];
-                }
-                Object.assign(MaterialsDB, parsed); 
-            }
-        } catch (e) { console.error("Error synchronizing MaterialsDB in Tab4:", e); }
-    },
+    syncMaterialsDB() {},
 
     init() {
         this.container = document.getElementById('sweep-container');
@@ -914,3 +902,6 @@ export const SweepManager = {
         document.body.removeChild(link);
     },
 };
+
+
+

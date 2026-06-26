@@ -1,4 +1,4 @@
-import { Complex } from './Complex.js?v=50';
+import { Complex } from './Complex.js?v=53';
 
 /**
  * Înmulțește două matrici 2x2 de numere complexe.
@@ -160,4 +160,5 @@ export function simulateTMM({ lambda, theta, polarization, layers }) {
         return calculateSinglePolarization(lambda, theta, polarization, layers);
     }
 }
+
 

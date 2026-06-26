@@ -1,6 +1,6 @@
-import { GeometryManager } from './tab2Geometry.js?v=50';
-import { simulateTMM } from '../core/tmm2x2Engine.js?v=50';
-import { MaterialsDB } from '../core/materials_database.js?v=50';
+import { GeometryManager } from './tab2Geometry.js?v=53';
+import { simulateTMM } from '../core/tmm2x2Engine.js?v=53';
+import { MaterialsDB } from '../core/materials_database.js?v=53';
 
 // Compact Nelder-Mead implementation for Auto-Fit
 const nelderMead = (f, x0, tol = 1e-5, maxIter = 1000) => {
@@ -70,19 +70,7 @@ export const SimulationManager = {
         return null;
     },
 
-    syncMaterialsDB() {
-        try {
-            const savedDB = localStorage.getItem('plasmonic_materials');
-            if (savedDB) {
-                const parsed = JSON.parse(savedDB);
-                const predefined = ['BK7', 'SiO2', 'TiO2', 'Air', 'H2O', 'Au', 'Ag', 'Graphene'];
-                for (const key in MaterialsDB) {
-                    if (!predefined.includes(key)) delete MaterialsDB[key];
-                }
-                Object.assign(MaterialsDB, parsed); 
-            }
-        } catch (e) { console.error("Error synchronizing MaterialsDB in Tab3:", e); }
-    },
+    syncMaterialsDB() {},
 
     init(workerInstance) {
         this.worker = workerInstance;
@@ -98,7 +86,7 @@ export const SimulationManager = {
         this.syncMaterialsDB();
         
         // Instantiate a separate worker for Electric Field calculation
-        this.fieldWorker = new Worker('./js/workers/Edistribution.worker.js?v=50');
+        this.fieldWorker = new Worker('./js/workers/Edistribution.worker.js?v=53');
         this.fieldWorker.onmessage = (e) => {
             this.lastFieldData = e.data;
             this.renderFieldPlot(e.data);
@@ -202,6 +190,15 @@ export const SimulationManager = {
                                 <option value="phaseR">Reflection Phase</option>
                                 <option value="phaseT">Transmission Phase</option>
                             </select>
+                            
+                            <!-- Regions of Interest (ROIs) -->
+                            <div style="background: var(--bg-main); padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid var(--border-color);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <h4 style="margin: 0; font-size: 0.85rem; color: var(--text-main);">Regions of Interest</h4>
+                                    <button id="btn-add-roi" style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 0.8rem;"><i class="fa-solid fa-plus"></i> Add</button>
+                                </div>
+                                <div id="roi-list" style="display: flex; flex-direction: column; gap: 5px;"></div>
+                            </div>
                             
                             <!-- Metric Tabs (SPR vs DBR) -->
                             <div style="display: flex; gap: 5px; margin-bottom: 10px;">
@@ -402,7 +399,6 @@ export const SimulationManager = {
 
         document.getElementById('btn-auto-fit').addEventListener('click', () => this.runAutoFit());
 
-        // Tab Switching Logic (SPR vs DBR)
         const btnSpr = document.getElementById('tab-btn-spr');
         const btnDbr = document.getElementById('tab-btn-dbr');
         const pnlSpr = document.getElementById('panel-spr');
@@ -439,7 +435,6 @@ export const SimulationManager = {
             this.showFwhmOverlay = e.target.checked;
             this.drawAnalysisGraph();
         });
-
         // Overlay Checkboxes (DBR)
         document.getElementById('chk-dbr-center').addEventListener('change', e => {
             this.showDbrCenterOverlay = e.target.checked;
@@ -454,6 +449,16 @@ export const SimulationManager = {
             this.showSensOverlay = e.target.checked;
             this.drawAnalysisGraph();
         });
+
+        // ROI Events
+        window.SimulationROIs = window.SimulationROIs || [];
+        document.getElementById('btn-add-roi').addEventListener('click', () => {
+            window.SimulationROIs.push({ min: 40, max: 50 });
+            this.renderROIList();
+            this.updateAnalysisStats();
+            this.drawAnalysisGraph();
+        });
+        this.renderROIList();
 
         // Electric Field Button
         const btnField = document.getElementById('btn-show-field');
@@ -473,13 +478,16 @@ export const SimulationManager = {
 
         // Field Controls
         document.getElementById('field-eval-x').addEventListener('change', () => {
-            if (this.lastFieldData) this.renderFieldPlot(this.lastFieldData);
+            this.triggerFieldWorker();
+        });
+        document.getElementById('field-component-select').addEventListener('change', () => {
+            if(this.lastFieldData) this.renderFieldPlot(this.lastFieldData);
         });
         document.getElementById('field-show-lp').addEventListener('change', () => {
-            if (this.lastFieldData) this.renderFieldPlot(this.lastFieldData);
+            if(this.lastFieldData) this.renderFieldPlot(this.lastFieldData);
         });
 
-        document.getElementById('btn-export-field').addEventListener('click', () => { if(this.showFieldOverlay) this.triggerFieldWorker(); });
+        document.getElementById('btn-export-field').addEventListener('click', () => { if(this.showFieldOverlay) this.exportFieldCSV(); });
         
         const zMinInput = document.getElementById('field-z-min');
         const zMaxInput = document.getElementById('field-z-max');
@@ -489,12 +497,13 @@ export const SimulationManager = {
         zMinInput.addEventListener('change', () => { if(this.showFieldOverlay) this.triggerFieldWorker(); });
         zMaxInput.addEventListener('change', () => { if(this.showFieldOverlay) this.triggerFieldWorker(); });
 
-        document.getElementById('btn-recalc-field').addEventListener('click', () => { if(this.showFieldOverlay) this.triggerFieldWorker(); });
-        document.getElementById('field-component-select').addEventListener('change', () => { if(this.showFieldOverlay) this.triggerFieldWorker(); });
+        document.getElementById('btn-recalc-field').addEventListener('click', () => {
+            document.getElementById('field-z-min').removeAttribute('data-auto');
+            document.getElementById('field-z-max').removeAttribute('data-auto');
+            this.triggerFieldWorker();
+        });
 
-        // CSV Export Events
         document.getElementById('btn-export-main').addEventListener('click', () => this.exportMainGraphCSV());
-        document.getElementById('btn-export-field').addEventListener('click', () => this.exportFieldGraphCSV());
     },
 
     getEvaluatedLayers(lambda) {
@@ -625,42 +634,39 @@ export const SimulationManager = {
         }
     },
 
-    updateAnalysisStats() {
-        if (!this.lastWorkerData) return;
-        const metric = document.getElementById('analysis-trace').value;
-        const yData = this.getSafeData(this.lastWorkerData.data, metric);
-        if (!yData) return;
-        const xData = this.lastWorkerData.data.x;
-
-        // SPR calculations (Min search)
+    computeStatsForRange(xData, yData, minBound = -Infinity, maxBound = Infinity) {
         let minVal = Infinity, maxVal = -Infinity;
-        let minIdx = 0, maxIdx = 0;
+        let minIdx = -1, maxIdx = -1;
+
         for (let i = 0; i < yData.length; i++) {
-            const v = yData[i];
-            if (Number.isFinite(v)) {
-                if (v < minVal) { minVal = v; minIdx = i; }
-                if (v > maxVal) { maxVal = v; maxIdx = i; }
+            if (xData[i] >= minBound && xData[i] <= maxBound) {
+                const v = yData[i];
+                if (Number.isFinite(v)) {
+                    if (v < minVal) { minVal = v; minIdx = i; }
+                    if (v > maxVal) { maxVal = v; maxIdx = i; }
+                }
             }
         }
-        if (minVal === Infinity) { minVal = 0; minIdx = 0; }
-        if (maxVal === -Infinity) { maxVal = 0; maxIdx = 0; }
+        
+        if (minIdx === -1) { return null; } // No data in range
 
-        const minX = xData[minIdx] !== undefined ? xData[minIdx] : 0;
-        const maxX = xData[maxIdx] !== undefined ? xData[maxIdx] : 0;
+        const minX = xData[minIdx];
+        const maxX = xData[maxIdx];
         const baselineMax = maxVal;
         const baselineMin = minVal;
         
+        // SPR fwhm
         const halfMaxSpr = minVal + (baselineMax - minVal) / 2;
         let leftX_spr = null, rightX_spr = null, isTruncatedSpr = false;
         
-        for (let i = minIdx; i >= 0; i--) {
+        for (let i = minIdx; i >= 0 && xData[i] >= minBound; i--) {
             if (yData[i] > halfMaxSpr) {
                 const denom = yData[i+1] - yData[i];
                 leftX_spr = denom !== 0 ? xData[i] + (xData[i+1] - xData[i]) * ((halfMaxSpr - yData[i]) / denom) : xData[i];
                 break;
             }
         }
-        for (let i = minIdx; i < yData.length; i++) {
+        for (let i = minIdx; i < yData.length && xData[i] <= maxBound; i++) {
             if (yData[i] > halfMaxSpr) {
                 const denom = yData[i] - yData[i-1];
                 rightX_spr = denom !== 0 ? xData[i-1] + (xData[i] - xData[i-1]) * ((halfMaxSpr - yData[i-1]) / denom) : xData[i-1];
@@ -669,7 +675,6 @@ export const SimulationManager = {
         }
 
         let fwhmValSpr = 0, fwhmStrSpr = "N/A";
-
         if (leftX_spr !== null && rightX_spr !== null) {
             fwhmValSpr = rightX_spr - leftX_spr;
             fwhmStrSpr = fwhmValSpr.toFixed(3);
@@ -685,19 +690,18 @@ export const SimulationManager = {
             isTruncatedSpr = true;
         }
 
-        // DBR calculations (Peak and bandgap width search)
+        // DBR bandgap
         const halfMaxDbr = baselineMin + (maxVal - baselineMin) / 2; 
-
         let leftX_dbr = null, rightX_dbr = null, isTruncatedDbr = false;
 
-        for (let i = maxIdx; i >= 0; i--) {
+        for (let i = maxIdx; i >= 0 && xData[i] >= minBound; i--) {
             if (yData[i] < halfMaxDbr) { 
                 const denom = yData[i+1] - yData[i];
                 leftX_dbr = denom !== 0 ? xData[i] + (xData[i+1] - xData[i]) * ((halfMaxDbr - yData[i]) / denom) : xData[i];
                 break;
             }
         }
-        for (let i = maxIdx; i < yData.length; i++) {
+        for (let i = maxIdx; i < yData.length && xData[i] <= maxBound; i++) {
             if (yData[i] < halfMaxDbr) { 
                 const denom = yData[i] - yData[i-1];
                 rightX_dbr = denom !== 0 ? xData[i-1] + (xData[i] - xData[i-1]) * ((halfMaxDbr - yData[i-1]) / denom) : xData[i-1];
@@ -706,7 +710,6 @@ export const SimulationManager = {
         }
 
         let bandgapVal = 0, bandgapStr = "N/A";
-
         if (leftX_dbr !== null && rightX_dbr !== null) {
             bandgapVal = rightX_dbr - leftX_dbr;
             bandgapStr = bandgapVal.toFixed(3);
@@ -722,24 +725,58 @@ export const SimulationManager = {
             isTruncatedDbr = true;
         }
 
-        // Globally cache computed statistics
-        this.currentStats = { 
-            spr: { minVal, minX, baseline: baselineMax, halfMax: halfMaxSpr, fwhm: fwhmValSpr, leftX: leftX_spr, rightX: rightX_spr, isTruncated: isTruncatedSpr },
-            dbr: { maxVal, maxX, baseline: baselineMin, halfMax: halfMaxDbr, bandgap: bandgapVal, leftX: leftX_dbr, rightX: rightX_dbr, isTruncated: isTruncatedDbr }
+        return {
+            spr: { minVal, minX, baseline: baselineMax, halfMax: halfMaxSpr, fwhm: fwhmValSpr, fwhmStr: fwhmStrSpr, leftX: leftX_spr, rightX: rightX_spr, isTruncated: isTruncatedSpr },
+            dbr: { maxVal, maxX, baseline: baselineMin, halfMax: halfMaxDbr, bandgap: bandgapVal, bandgapStr: bandgapStr, leftX: leftX_dbr, rightX: rightX_dbr, isTruncated: isTruncatedDbr }
         };
+    },
 
-        // Update DOM - SPR Panel
-        document.getElementById('spr-stats-text').innerHTML = `
-            <b>Dip (Min):</b> ${minVal.toFixed(4)} at X = ${minX.toFixed(3)}<br>
-            <b>FWHM:</b> ${fwhmStrSpr} <span class="text-muted" style="font-size: 0.75rem;">${isTruncatedSpr ? '(Partial estimate)' : ''}</span>
-        `;
+    updateAnalysisStats() {
+        if (!this.lastWorkerData) return;
+        const metric = document.getElementById('analysis-trace').value;
+        const yData = this.getSafeData(this.lastWorkerData.data, metric);
+        if (!yData) return;
+        const xData = this.lastWorkerData.data.x;
 
-        // Update DOM - DBR Panel
-        document.getElementById('dbr-stats-text').innerHTML = `
-            <b>Center ($\lambda_c$):</b> ${maxX.toFixed(3)}<br>
-            <b>Max ${metric}:</b> ${(maxVal * 100).toFixed(2)}%<br>
-            <b>Bandgap ($\Delta\lambda$):</b> ${bandgapStr} <span class="text-muted" style="font-size: 0.75rem;">${isTruncatedDbr ? '(Estimate)' : ''}</span>
-        `;
+        const rois = window.SimulationROIs && window.SimulationROIs.length > 0 ? window.SimulationROIs : [{ min: -Infinity, max: Infinity, label: "Global" }];
+        
+        this.currentStats = []; // Array of stats
+        
+        let sprHtml = '';
+        let dbrHtml = '';
+
+        rois.forEach((roi, idx) => {
+            const stats = this.computeStatsForRange(xData, yData, roi.min, roi.max);
+            if (!stats) return;
+            
+            stats.roiLabel = roi.label || `ROI ${idx + 1}`;
+            this.currentStats.push(stats);
+
+            sprHtml += `
+                <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+                    <div style="color: var(--accent-green); font-size: 0.8rem; margin-bottom: 4px;"><b>${stats.roiLabel}</b> [${roi.min === -Infinity ? 'Global' : roi.min + ' - ' + roi.max}]</div>
+                    <b>Dip (Min):</b> ${stats.spr.minVal.toFixed(4)} at X = ${stats.spr.minX.toFixed(3)}<br>
+                    <b>FWHM:</b> ${stats.spr.fwhmStr} <span class="text-muted" style="font-size: 0.75rem;">${stats.spr.isTruncated ? '(Partial estimate)' : ''}</span>
+                </div>
+            `;
+
+            dbrHtml += `
+                <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+                    <div style="color: #fbbf24; font-size: 0.8rem; margin-bottom: 4px;"><b>${stats.roiLabel}</b> [${roi.min === -Infinity ? 'Global' : roi.min + ' - ' + roi.max}]</div>
+                    <b>Center ($\lambda_c$):</b> ${stats.dbr.maxX.toFixed(3)}<br>
+                    <b>Max ${metric}:</b> ${(stats.dbr.maxVal * 100).toFixed(2)}%<br>
+                    <b>Bandgap ($\Delta\lambda$):</b> ${stats.dbr.bandgapStr} <span class="text-muted" style="font-size: 0.75rem;">${stats.dbr.isTruncated ? '(Estimate)' : ''}</span>
+                </div>
+            `;
+        });
+
+        if (this.currentStats.length === 0) {
+            sprHtml = '<div style="color: var(--color-danger);">No data found in selected ROIs.</div>';
+            dbrHtml = '<div style="color: var(--color-danger);">No data found in selected ROIs.</div>';
+        }
+
+        document.getElementById('spr-stats-text').innerHTML = sprHtml;
+        document.getElementById('dbr-stats-text').innerHTML = dbrHtml;
     },
 
     calculateSensitivity() {
@@ -1059,60 +1096,75 @@ export const SimulationManager = {
         }
 
         let annotations = [];
+        if (this.currentStats && Array.isArray(this.currentStats)) {
+            this.currentStats.forEach(stats => {
+                // Overlay SPR (Minim)
+                if (this.showResOverlay && stats.spr) {
+                    traces.push({
+                        x: [stats.spr.minX], y: [stats.spr.minVal],
+                        name: 'Dip SPR', mode: 'markers', marker: { color: window.getCSSColor('--color-danger'), size: 10, symbol: 'x' }, hoverinfo: 'none'
+                    });
+                    annotations.push({
+                        x: stats.spr.minX, y: stats.spr.minVal,
+                        text: `Dip: ${stats.spr.minX.toFixed(2)}`, showarrow: true, ax: 0, ay: 30,
+                        font: { color: window.getCSSColor('--color-danger') }, arrowcolor: window.getCSSColor('--color-danger')
+                    });
+                }
 
-        // Overlay SPR (Minim)
-        if (this.showResOverlay && this.currentStats && this.currentStats.spr) {
-            const spr = this.currentStats.spr;
-            traces.push({
-                x: [spr.minX], y: [spr.minVal],
-                name: 'Dip SPR', mode: 'markers', marker: { color: window.getCSSColor('--color-danger'), size: 10, symbol: 'x' }
-            });
-            annotations.push({
-                x: spr.minX, y: spr.minVal,
-                text: `Dip: ${spr.minX.toFixed(2)}`, showarrow: true, ax: 0, ay: 30,
-                font: { color: window.getCSSColor('--color-danger') }, arrowcolor: window.getCSSColor('--color-danger')
+                // Overlay SPR (FWHM)
+                if (this.showFwhmOverlay && stats.spr.leftX !== null && stats.spr.rightX !== null) {
+                    traces.push({
+                        x: [stats.spr.leftX, stats.spr.rightX], y: [stats.spr.halfMax, stats.spr.halfMax],
+                        name: 'FWHM', mode: 'lines+markers', line: { color: window.getCSSColor('--accent-blue'), width: 2 }, marker: { size: 6 }, hoverinfo: 'none'
+                    });
+                    annotations.push({
+                        x: (stats.spr.leftX + stats.spr.rightX) / 2, y: stats.spr.halfMax,
+                        text: `FWHM: ${stats.spr.fwhm.toFixed(3)}${stats.spr.isTruncated ? '*' : ''}`,
+                        showarrow: true, ax: 0, ay: -30, font: { color: window.getCSSColor('--accent-blue') }, arrowcolor: window.getCSSColor('--accent-blue')
+                    });
+                }
+
+                // Overlay DBR (Center / Peak)
+                if (this.showDbrCenterOverlay && stats.dbr) {
+                    traces.push({
+                        x: [stats.dbr.maxX], y: [stats.dbr.maxVal],
+                        name: 'DBR Peak', mode: 'markers', marker: { color: window.getCSSColor('--color-warning-alt'), size: 10, symbol: 'star' }, hoverinfo: 'none'
+                    });
+                    annotations.push({
+                        x: stats.dbr.maxX, y: stats.dbr.maxVal,
+                        text: `λ_c: ${stats.dbr.maxX.toFixed(2)}`, showarrow: true, ax: 0, ay: -30,
+                        font: { color: window.getCSSColor('--color-warning-alt') }, arrowcolor: window.getCSSColor('--color-warning-alt')
+                    });
+                }
+
+                // Overlay DBR (Bandgap)
+                if (this.showDbrBandgapOverlay && stats.dbr.leftX !== null && stats.dbr.rightX !== null) {
+                    traces.push({
+                        x: [stats.dbr.leftX, stats.dbr.rightX], y: [stats.dbr.halfMax, stats.dbr.halfMax],
+                        name: 'BandGAP', mode: 'lines+markers', line: { color: window.getCSSColor('--color-success'), width: 2 }, marker: { size: 6 }, hoverinfo: 'none'
+                    });
+                    annotations.push({
+                        x: (stats.dbr.leftX + stats.dbr.rightX) / 2, y: stats.dbr.halfMax,
+                        text: `Δλ: ${stats.dbr.bandgap.toFixed(3)}${stats.dbr.isTruncated ? '*' : ''}`,
+                        showarrow: true, ax: 0, ay: 30, font: { color: window.getCSSColor('--color-success') }, arrowcolor: window.getCSSColor('--color-success')
+                    });
+                }
             });
         }
 
-        // Overlay SPR (FWHM)
-        if (this.showFwhmOverlay && this.currentStats && this.currentStats.spr.leftX !== null && this.currentStats.spr.rightX !== null) {
-            const spr = this.currentStats.spr;
-            traces.push({
-                x: [spr.leftX, spr.rightX], y: [spr.halfMax, spr.halfMax],
-                name: 'FWHM', mode: 'lines+markers', line: { color: window.getCSSColor('--accent-blue'), width: 2 }, marker: { size: 6 }
-            });
-            annotations.push({
-                x: (spr.leftX + spr.rightX) / 2, y: spr.halfMax,
-                text: `FWHM: ${spr.fwhm.toFixed(3)}${spr.isTruncated ? '*' : ''}`,
-                showarrow: true, ax: 0, ay: -30, font: { color: window.getCSSColor('--accent-blue') }, arrowcolor: window.getCSSColor('--accent-blue')
-            });
-        }
-
-        // Overlay DBR (Center / Peak)
-        if (this.showDbrCenterOverlay && this.currentStats && this.currentStats.dbr) {
-            const dbr = this.currentStats.dbr;
-            traces.push({
-                x: [dbr.maxX], y: [dbr.maxVal],
-                name: 'DBR Peak', mode: 'markers', marker: { color: window.getCSSColor('--color-warning-alt'), size: 10, symbol: 'star' }
-            });
-            annotations.push({
-                x: dbr.maxX, y: dbr.maxVal,
-                text: `λ_c: ${dbr.maxX.toFixed(2)}`, showarrow: true, ax: 0, ay: -30,
-                font: { color: window.getCSSColor('--color-warning-alt') }, arrowcolor: window.getCSSColor('--color-warning-alt')
-            });
-        }
-
-        // Overlay DBR (Bandgap)
-        if (this.showDbrBandgapOverlay && this.currentStats && this.currentStats.dbr.leftX !== null && this.currentStats.dbr.rightX !== null) {
-            const dbr = this.currentStats.dbr;
-            traces.push({
-                x: [dbr.leftX, dbr.rightX], y: [dbr.halfMax, dbr.halfMax],
-                name: 'BandGAP', mode: 'lines+markers', line: { color: window.getCSSColor('--color-success'), width: 2 }, marker: { size: 6 }
-            });
-            annotations.push({
-                x: (dbr.leftX + dbr.rightX) / 2, y: dbr.halfMax,
-                text: `Δλ: ${dbr.bandgap.toFixed(3)}${dbr.isTruncated ? '*' : ''}`,
-                showarrow: true, ax: 0, ay: 30, font: { color: window.getCSSColor('--color-success') }, arrowcolor: window.getCSSColor('--color-success')
+        // Add ROI shading to background
+        if (window.SimulationROIs && window.SimulationROIs.length > 0) {
+            window.SimulationROIs.forEach(roi => {
+                traces.push({
+                    x: [roi.min, roi.max, roi.max, roi.min],
+                    y: [0, 0, 1.1, 1.1],
+                    fill: 'toself',
+                    fillcolor: 'rgba(59, 130, 246, 0.1)', // accent-blue very transparent
+                    line: { width: 0 },
+                    name: 'ROI',
+                    hoverinfo: 'none',
+                    showlegend: false
+                });
             });
         }
 
@@ -1120,7 +1172,7 @@ export const SimulationManager = {
         const layout = {
             paper_bgcolor: tc.bg, plot_bgcolor: tc.bg, font: { color: tc.text },
             xaxis: { title: xTitle, gridcolor: tc.grid, zerolinecolor: tc.grid },
-            yaxis: { title: metricLabels[metric] || metric, gridcolor: tc.grid, zerolinecolor: tc.grid },
+            yaxis: { title: metricLabels[metric] || metric, gridcolor: tc.grid, zerolinecolor: tc.grid, range: [0, 1.1] },
             margin: { t: 30, b: 50, l: 60, r: 20 },
             showlegend: true,
             annotations: annotations
@@ -1136,11 +1188,11 @@ export const SimulationManager = {
         const id = Date.now() + '-' + Math.floor(Math.random() * 1000);
         let y0 = 1, A = -0.5, xc = 45, w = 2;
         
-        if (this.currentStats && this.currentStats.spr) {
-            y0 = Number(this.currentStats.spr.baseline.toFixed(4));
-            A = Number((this.currentStats.spr.minVal - this.currentStats.spr.baseline).toFixed(4));
-            xc = Number(this.currentStats.spr.minX.toFixed(4));
-            w = Number(this.currentStats.spr.fwhm.toFixed(4));
+        if (this.currentStats && this.currentStats.length > 0 && this.currentStats[0].spr) {
+            y0 = Number(this.currentStats[0].spr.baseline.toFixed(4));
+            A = Number((this.currentStats[0].spr.minVal - this.currentStats[0].spr.baseline).toFixed(4));
+            xc = Number(this.currentStats[0].spr.minX.toFixed(4));
+            w = Number(this.currentStats[0].spr.fwhm.toFixed(4));
         }
 
         let comp = { id, type, y0, A, xc, w };
@@ -1150,6 +1202,44 @@ export const SimulationManager = {
         this.fitComponents.push(comp);
         this.renderFitComponents();
         this.drawAnalysisGraph();
+    },
+
+    renderROIList() {
+        const list = document.getElementById('roi-list');
+        if (!list) return;
+        
+        let html = '';
+        window.SimulationROIs.forEach((roi, idx) => {
+            html += `
+            <div style="display: flex; gap: 5px; align-items: center;">
+                <span class="text-muted" style="font-size:0.75rem;">#${idx+1}</span>
+                <input type="number" class="roi-input" data-idx="${idx}" data-key="min" value="${roi.min}" step="0.1" style="width: 60px; padding: 2px; background:var(--bg-card); color: var(--text-main); border:1px solid var(--border-color);">
+                <span style="color:var(--text-main);">to</span>
+                <input type="number" class="roi-input" data-idx="${idx}" data-key="max" value="${roi.max}" step="0.1" style="width: 60px; padding: 2px; background:var(--bg-card); color: var(--text-main); border:1px solid var(--border-color);">
+                <button class="btn-del-roi text-danger" data-idx="${idx}" style="background:none; border:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+        });
+        list.innerHTML = html;
+
+        document.querySelectorAll('.roi-input').forEach(el => {
+            el.addEventListener('change', (e) => {
+                const idx = parseInt(e.target.dataset.idx);
+                const key = e.target.dataset.key;
+                window.SimulationROIs[idx][key] = parseFloat(e.target.value);
+                this.updateAnalysisStats();
+                this.drawAnalysisGraph();
+            });
+        });
+
+        document.querySelectorAll('.btn-del-roi').forEach(el => {
+            el.addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.dataset.idx);
+                window.SimulationROIs.splice(idx, 1);
+                this.renderROIList();
+                this.updateAnalysisStats();
+                this.drawAnalysisGraph();
+            });
+        });
     },
 
     renderFitComponents() {
@@ -1229,11 +1319,16 @@ export const SimulationManager = {
             });
         };
 
+        const rois = window.SimulationROIs && window.SimulationROIs.length > 0 ? window.SimulationROIs : [{ min: -Infinity, max: Infinity }];
+
         const objectiveFunc = (pArray) => {
             setP(pArray);
             let sse = 0;
             for (let i = 0; i < xData.length; i++) {
-                sse += Math.pow(this.evaluateFitModel(xData[i]) - yData[i], 2);
+                const x = xData[i];
+                let inRange = false;
+                for (let r of rois) { if (x >= r.min && x <= r.max) inRange = true; }
+                if (inRange) sse += Math.pow(this.evaluateFitModel(x) - yData[i], 2);
             }
             return sse;
         };
@@ -1331,3 +1426,6 @@ export const SimulationManager = {
         document.body.removeChild(link);
     }
 };
+
+
+

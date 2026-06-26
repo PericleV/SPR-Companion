@@ -1,5 +1,5 @@
-import { simulateTMM } from '../core/tmm2x2Engine.js?v=50';
-import { Complex, getEps, getNK, getNKAtWave } from '../core/materials_database.js?v=50';
+import { simulateTMM } from '../core/tmm2x2Engine.js?v=53';
+import { Complex, getEps, getNK, getNKAtWave } from '../core/materials_database.js?v=53';
 
 function calcEMA(hostMat, incMat, ff, algo, w) {
     const h = getNKAtWave(hostMat, w);
@@ -109,3 +109,4 @@ self.onmessage = function(e) {
         }
     }
 };
+

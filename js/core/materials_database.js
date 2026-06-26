@@ -56,67 +56,40 @@ export function getNKAtWave(mat, w) {
     return {n: 1, k: 0};
 }
 
-// Obiectul central de date. Orice fișier importă acesta referință va accesa exact aceeași memorie.
-export const MaterialsDB = {
-    'BK7': { category: 'standard', type: 'constant', n: 1.515, k: 0.0 }, 
-    'SiO2': { category: 'standard', type: 'constant', n: 1.457, k: 0.0 }, 
-    'TiO2': { category: 'standard', type: 'constant', n: 2.41, k: 0.0 },
-    'Air': { category: 'standard', type: 'constant', n: 1.0, k: 0.0 }, 
-    'H2O': { category: 'standard', type: 'constant', n: 1.333, k: 0.0 },
-    'Graphene': { category: '2d', type: 'constant', d_mono: 0.34, n: 2.5, k: 1.2 },
-    'Au': { 
-        category: 'standard', type: 'dispersive', 
-        data: [
-            { w: 400, n: 1.658, k: 1.956 }, { w: 450, n: 1.500, k: 1.880 }, 
-            { w: 500, n: 0.849, k: 1.892 }, { w: 550, n: 0.331, k: 2.324 }, 
-            { w: 600, n: 0.200, k: 3.000 }, { w: 650, n: 0.142, k: 3.697 },
-            { w: 700, n: 0.131, k: 4.062 }, { w: 800, n: 0.150, k: 5.280 },
-            { w: 900, n: 0.170, k: 6.200 }, { w: 1000, n: 0.200, k: 7.100 }
-        ] 
-    },
-    'Ag': { 
-        category: 'standard', type: 'dispersive', 
-        data: [
-            { w: 400, n: 0.05, k: 1.93 }, { w: 500, n: 0.05, k: 3.13 }, 
-            { w: 600, n: 0.06, k: 4.15 }, { w: 700, n: 0.04, k: 5.12 }, 
-            { w: 800, n: 0.04, k: 5.99 }, { w: 1000, n: 0.04, k: 7.20 }
-        ] 
-    }
-};
+import { DefaultMaterials } from '../data/default_materials.js?v=53';
 
-// Sincronizare automată: la inițializarea aplicației, încărcăm orice material 
-// custom (poros, 2D, aliaj) salvat anterior în LocalStorage.
-try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-        const savedDB = localStorage.getItem('plasmonic_materials');
-        if (savedDB) {
-            const parsed = JSON.parse(savedDB);
-            // Sanitize loaded materials to remove any NaN values that might have been saved due to past bugs
-            const cleanedMaterials = {};
-            for (let key in parsed) {
-                // Ignore weird names
-                if (!key || key === 'NaN' || key === 'undefined' || key === 'null' || key.trim() === '') continue;
-                
-                const mat = parsed[key];
-                
-                // If it's completely broken, skip
-                if (!mat || typeof mat !== 'object' || !mat.type) continue;
-                
-                if (mat.type === 'dispersive' && Array.isArray(mat.data)) {
-                    mat.data = mat.data.filter(p => !isNaN(p.w) && !isNaN(p.n) && !isNaN(p.k) && p.w !== null && p.n !== null && p.k !== null);
-                    // Skip empty dispersive materials
-                    if (mat.data.length === 0) continue;
+// Obiectul central de date. Orice fișier importă acesta referință va accesa exact aceeași memorie.
+export const MaterialsDB = {};
+
+export async function initMaterialsDB() {
+    try {
+        // 1. Încărcăm baza de date default
+        for (let key in MaterialsDB) delete MaterialsDB[key];
+        Object.assign(MaterialsDB, DefaultMaterials);
+        
+        // 2. Încărcăm și suprascriem cu materialele custom din LocalStorage
+        if (typeof window !== 'undefined' && window.localStorage) {
+            const savedDB = localStorage.getItem('plasmonic_materials');
+            if (savedDB) {
+                const parsed = JSON.parse(savedDB);
+                const cleanedMaterials = {};
+                for (let key in parsed) {
+                    if (!key || key === 'NaN' || key === 'undefined' || key === 'null' || key.trim() === '') continue;
+                    const mat = parsed[key];
+                    if (!mat || typeof mat !== 'object' || !mat.type) continue;
+                    if (mat.type === 'dispersive' && Array.isArray(mat.data)) {
+                        mat.data = mat.data.filter(p => !isNaN(p.w) && !isNaN(p.n) && !isNaN(p.k) && p.w !== null && p.n !== null && p.k !== null);
+                        if (mat.data.length === 0) continue;
+                    }
+                    cleanedMaterials[key] = mat;
                 }
-                
-                cleanedMaterials[key] = mat;
+                localStorage.setItem('plasmonic_materials', JSON.stringify(cleanedMaterials));
+                Object.assign(MaterialsDB, cleanedMaterials);
             }
-            
-            // Rewrite the clean storage
-            localStorage.setItem('plasmonic_materials', JSON.stringify(cleanedMaterials));
-            
-            Object.assign(MaterialsDB, cleanedMaterials); // Îmbinăm baza de date
         }
+    } catch (e) {
+        console.error("Eroare la inițializarea bazei de date de materiale:", e);
     }
-} catch (e) {
-    console.error("Eroare la sincronizarea bazei de date cu LocalStorage:", e);
 }
+
+

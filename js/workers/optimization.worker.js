@@ -1,4 +1,4 @@
-import { GeneticOptimizer, ParticleSwarmOptimizer, GradientDescentOptimizer } from '../core/geneticAlgo.js?v=50';
+import { GeneticOptimizer, ParticleSwarmOptimizer, GradientDescentOptimizer } from '../core/geneticAlgo.js?v=53';
 
 // --- Handler Mesaje ---
 // Worker-ul a devenit extrem de ușor. Preia configurația și lansează core-ul separat,
@@ -21,3 +21,4 @@ self.onmessage = function(e) {
         postMessage({ type: 'error', message: err.message, stack: err.stack });
     }
 };
+

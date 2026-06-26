@@ -1,4 +1,4 @@
-import { MaterialsDB } from '../core/materials_database.js?v=50';
+import { MaterialsDB } from '../core/materials_database.js?v=53';
 
 export const GeometryManager = {
     layers: [
@@ -97,19 +97,7 @@ export const GeometryManager = {
         });
     },
 
-    syncMaterialsDB() {
-        try {
-            const savedDB = localStorage.getItem('plasmonic_materials');
-            if (savedDB) {
-                const parsed = JSON.parse(savedDB);
-                const predefined = ['BK7', 'SiO2', 'TiO2', 'Air', 'H2O', 'Au', 'Ag', 'Graphene'];
-                for (const key in MaterialsDB) {
-                    if (!predefined.includes(key)) delete MaterialsDB[key];
-                }
-                Object.assign(MaterialsDB, parsed);
-            }
-        } catch (e) {}
-    },
+    syncMaterialsDB() {},
 
     render() {
         if (!this.container) return;
@@ -126,16 +114,14 @@ export const GeometryManager = {
                     <!-- Save/Load Panel -->
                     <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); flex-shrink: 0;">
                         <h3 style="color: var(--text-main); margin-bottom: 15px; margin-top: 0; font-size: 1.1rem;"><i class="fa-solid fa-floppy-disk"></i> Configuration Manager</h3>
-                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                            <input type="text" id="config-name-input" placeholder="Configuration Name..." value="Configuration 1" style="flex: 1; padding: 8px; background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px;">
-                            <button id="btn-save-config" style="background: var(--accent-blue); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;"><i class="fa-solid fa-save"></i> Save</button>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0; margin-bottom: 15px;">Export your complete configuration (materials & geometry) to a JSON file, or load an existing one.</p>
+                        <div style="margin-bottom: 15px;">
+                            <input type="text" id="config-name-input" placeholder="Configuration Name..." value="Configuration 1" style="width: 100%; box-sizing: border-box; padding: 8px; background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px;">
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <select id="config-load-select" style="flex: 1; padding: 8px; background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px;">
-                                <option value="">-- Saved Configurations --</option>
-                            </select>
-                            <button id="btn-load-config" style="background: var(--bg-sidebar); color: white; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;"><i class="fa-solid fa-folder-open"></i> Load</button>
-                            <button id="btn-delete-config" class="text-danger border-danger" style="background: transparent; border-width: 1px; border-style: solid; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;" title="Delete Configuration"><i class="fa-solid fa-trash"></i></button>
+                            <button id="btn-save-workspace" style="flex: 1; background: var(--bg-main); color: var(--accent-blue); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s;" title="Export Configuration (JSON)"><i class="fa-solid fa-file-export"></i> Save (JSON)</button>
+                            <button id="btn-load-workspace" style="flex: 1; background: var(--bg-main); color: var(--accent-green); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s;" title="Import Configuration (JSON)"><i class="fa-solid fa-file-import"></i> Load (JSON)</button>
+                            <input type="file" id="input-load-workspace" style="display: none;" accept=".json">
                         </div>
                     </div>
 
@@ -151,10 +137,10 @@ export const GeometryManager = {
                     <!-- Layers Edit Panel -->
                     <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); flex: 1; display: flex; flex-direction: column;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h3 style="color: var(--text-main); margin: 0; font-size: 1.1rem;"><i class="fa-solid fa-bars-staggered"></i> Layers (0 = Incident)</h3>
-                            <div style="display: flex; gap: 10px;">
-                                <button id="btn-reset-stack" class="text-danger border-danger" style="background: transparent; border-width: 1px; border-style: solid; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: 0.2s;"><i class="fa-solid fa-rotate-right"></i> Reset</button>
-                                <button id="btn-add-layer" style="background: var(--accent-green); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;"><i class="fa-solid fa-plus"></i> Add Layer</button>
+                            <h3 style="color: var(--text-main); margin: 0; font-size: 1.1rem; white-space: nowrap; margin-right: 10px;"><i class="fa-solid fa-bars-staggered"></i> Layers</h3>
+                            <div style="display: flex; gap: 8px; flex-wrap: nowrap; align-items: center;">
+                                <button id="btn-reset-stack" style="background: var(--color-danger); color: white; border: none; padding: 0 10px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: 500; width: 110px; height: 32px; display: inline-flex; justify-content: center; align-items: center; gap: 6px; box-sizing: border-box; line-height: 1;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"><i class="fa-solid fa-file-circle-plus"></i> New/Reset</button>
+                                <button id="btn-add-layer" style="background: var(--accent-green); color: white; border: none; padding: 0 10px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: 500; width: 110px; height: 32px; display: inline-flex; justify-content: center; align-items: center; gap: 6px; box-sizing: border-box; line-height: 1;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"><i class="fa-solid fa-plus"></i> Add Layer</button>
                             </div>
                         </div>
                         <div id="layers-list" style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding-right: 5px;"></div>
@@ -357,30 +343,53 @@ export const GeometryManager = {
         let diffHTML = '';
         let hasDiff = false;
 
-        for (let i = 1; i < this.layers.length - 1; i++) {
+        if (originalLayers.length !== this.layers.length) {
+            hasDiff = true;
+            diffHTML += `
+                <div style="margin-top: 5px; font-size: 0.8rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 5px;">
+                    <span style="font-weight: bold; color: var(--accent-blue);">Structure Changed:</span>
+                    <ul style="margin: 2px 0 0 15px; padding: 0; list-style-type: square; color: var(--text-muted);">
+                        <li>Layer count changed from ${originalLayers.length - 2} to ${this.layers.length - 2} intermediate layers.</li>
+                        <li>(This happens when DBR structure is optimized).</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        const maxLen = Math.max(originalLayers.length - 1, this.layers.length - 1);
+        for (let i = 1; i < maxLen; i++) {
             const origL = originalLayers[i];
             const optL = this.layers[i];
 
-            if (!origL || !optL) continue;
-
             let layerDiffs = [];
-            if (origL.material !== optL.material) {
-                layerDiffs.push(`Material: ${origL.material} &rarr; ${optL.material}`);
-            }
-            if (origL.type === '2d' && optL.type === '2d') {
-                if (origL.count !== optL.count) {
-                    layerDiffs.push(`Layers N: ${origL.count} &rarr; ${optL.count}`);
+            let titleHTML = '';
+
+            if (!origL && optL) {
+                titleHTML = `<span style="font-weight: bold; color: var(--accent-blue);">Layer ${i} (${optL.material}):</span>`;
+                layerDiffs.push(`Added as New Layer (Thickness: ${optL.d.toFixed(1)} nm)`);
+            } else if (origL && !optL) {
+                titleHTML = `<span style="font-weight: bold; color: var(--accent-blue);">Layer ${i} (Removed):</span>`;
+                layerDiffs.push(`Layer was removed. (Was ${origL.material})`);
+            } else if (origL && optL) {
+                titleHTML = `<span style="font-weight: bold; color: var(--accent-blue);">Layer ${i} (${optL.material}):</span>`;
+                if (origL.material !== optL.material) {
+                    layerDiffs.push(`Material: ${origL.material} &rarr; ${optL.material}`);
                 }
-            } else {
-                if (Math.abs(origL.d - optL.d) > 0.01) {
-                    layerDiffs.push(`Thickness: ${origL.d.toFixed(1)} nm &rarr; ${optL.d.toFixed(1)} nm`);
+                if (origL.type === '2d' && optL.type === '2d') {
+                    if (origL.count !== optL.count) {
+                        layerDiffs.push(`Layers N: ${origL.count} &rarr; ${optL.count}`);
+                    }
+                } else {
+                    if (Math.abs(origL.d - optL.d) > 0.01) {
+                        layerDiffs.push(`Thickness: ${origL.d.toFixed(1)} nm &rarr; ${optL.d.toFixed(1)} nm`);
+                    }
                 }
-            }
-            if (origL.type === 'porous' && optL.type === 'porous') {
-                const origFF = origL.ff !== undefined ? origL.ff : 0.5;
-                const optFF = optL.ff !== undefined ? optL.ff : 0.5;
-                if (Math.abs(origFF - optFF) > 0.005) {
-                    layerDiffs.push(`Fill Factor f: ${origFF.toFixed(2)} &rarr; ${optFF.toFixed(2)}`);
+                if (origL.type === 'porous' && optL.type === 'porous') {
+                    const origFF = origL.ff !== undefined ? origL.ff : 0.5;
+                    const optFF = optL.ff !== undefined ? optL.ff : 0.5;
+                    if (Math.abs(origFF - optFF) > 0.005) {
+                        layerDiffs.push(`Fill Factor f: ${origFF.toFixed(2)} &rarr; ${optFF.toFixed(2)}`);
+                    }
                 }
             }
 
@@ -388,7 +397,7 @@ export const GeometryManager = {
                 hasDiff = true;
                 diffHTML += `
                     <div style="margin-top: 5px; font-size: 0.8rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 5px;">
-                        <span style="font-weight: bold; color: var(--accent-blue);">Layer ${i} (${optL.material}):</span>
+                        ${titleHTML}
                         <ul style="margin: 2px 0 0 15px; padding: 0; list-style-type: square; color: var(--text-muted);">
                             ${layerDiffs.map(d => `<li>${d}</li>`).join('')}
                         </ul>
@@ -405,7 +414,7 @@ export const GeometryManager = {
                 Compared with original structure <b>"${originalName}"</b>:
             </p>
             <div style="max-height: 120px; overflow-y: auto; margin-top: 5px; padding-right: 5px;">
-                ${hasDiff ? diffHTML : '<div style="color: var(--text-muted); font-style: italic; font-size: 0.8rem; margin-top: 5px;">No parameter differences detected (or DBR structure optimized).</div>'}
+                ${hasDiff ? diffHTML : '<div style="color: var(--text-muted); font-style: italic; font-size: 0.8rem; margin-top: 5px;">No parameter differences detected (or global parameters unchanged).</div>'}
             </div>
         `;
     },
@@ -636,18 +645,30 @@ export const GeometryManager = {
                     { material: 'Au', d: 50, color: this.getDefaultColor('Au'), label: '', labelPos: 'center', type: 'standard' },      
                     { material: 'Air', d: 0, color: this.getDefaultColor('Air'), label: 'Detection Medium', labelPos: 'center', type: 'standard' }       
                 ];
+                
+                const nameInput = document.getElementById('config-name-input');
+                if (nameInput) {
+                    nameInput.value = "New Configuration";
+                    document.dispatchEvent(new Event('geometryUpdated'));
+                }
+
                 this.clearOptimizationState();
                 this.renderLayers();
             }
         });
 
-        document.getElementById('btn-save-config').addEventListener('click', () => this.saveConfiguration());
-        document.getElementById('btn-load-config').addEventListener('click', () => this.loadConfiguration());
-        document.getElementById('btn-delete-config').addEventListener('click', () => this.deleteConfiguration());
+
 
         document.getElementById('btn-export-svg').addEventListener('click', () => this.exportStackImage('svg'));
         document.getElementById('btn-export-png').addEventListener('click', () => this.exportStackImage('png'));
         document.getElementById('chk-show-labels').addEventListener('change', () => this.renderLayers());
+
+        const nameInput = document.getElementById('config-name-input');
+        if (nameInput) {
+            nameInput.addEventListener('input', () => {
+                document.dispatchEvent(new Event('geometryUpdated'));
+            });
+        }
     },
 
     attachInputEvents() {
@@ -696,8 +717,22 @@ export const GeometryManager = {
         
         const availHeight = height - (2 * semiHeight) - paddingTop - paddingBottom;
         
+        const rootStyles = getComputedStyle(document.documentElement);
+        const bgMain = rootStyles.getPropertyValue('--bg-main').trim() || '#121212';
+        const textMain = rootStyles.getPropertyValue('--text-main').trim() || '#ffffff';
+        const borderColor = rootStyles.getPropertyValue('--border-color').trim() || '#333333';
+        const textMuted = rootStyles.getPropertyValue('--text-muted').trim() || '#aaaaaa';
+
         let svg = `
             <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="font-family: sans-serif;">
+            <style>
+                :root {
+                    --bg-main: ${bgMain};
+                    --text-main: ${textMain};
+                    --border-color: ${borderColor};
+                    --text-muted: ${textMuted};
+                }
+            </style>
             <defs>
         `;
         
@@ -746,12 +781,11 @@ export const GeometryManager = {
 
             if (showLabels) {
                 if (layer.labelPos === 'left') {
-                    svg += `<text x="${rectX - 15}" y="${currentY + h/2}" text-anchor="end" fill="var(--text-main)" font-size="14" font-weight="bold" dominant-baseline="middle" style="paint-order: stroke; stroke: var(--bg-main); stroke-width: 3px;">${labelText} →</text>`;
+                    svg += `<text x="${rectX - 15}" y="${currentY + h/2}" text-anchor="end" fill="var(--text-main)" font-size="14" font-weight="bold" dominant-baseline="middle" style="paint-order: stroke; stroke: var(--bg-main); stroke-width: 3px;">${labelText} &rarr;</text>`;
                 } else if (layer.labelPos === 'right') {
-                    svg += `<text x="${rectX + rectWidth + 15}" y="${currentY + h/2}" text-anchor="start" fill="var(--text-main)" font-size="14" font-weight="bold" dominant-baseline="middle" style="paint-order: stroke; stroke: var(--bg-main); stroke-width: 3px;">← ${labelText}</text>`;
-                } else if (h >= 18) { 
-                    svg += `<rect x="${rectX + rectWidth/2 - 60}" y="${currentY + h/2 - 12}" width="120" height="24" rx="4" fill="var(--bg-main)" opacity="0.8" stroke="var(--border-color)" stroke-width="1" />`;
-                    svg += `<text x="${rectX + rectWidth/2}" y="${currentY + h/2 + 1}" fill="var(--text-main)" font-size="12" font-weight="bold" dominant-baseline="middle" text-anchor="middle">${labelText}</text>`;
+                    svg += `<text x="${rectX + rectWidth + 15}" y="${currentY + h/2}" text-anchor="start" fill="var(--text-main)" font-size="14" font-weight="bold" dominant-baseline="middle" style="paint-order: stroke; stroke: var(--bg-main); stroke-width: 3px;">&larr; ${labelText}</text>`;
+                } else { 
+                    svg += `<text x="${rectX + rectWidth/2}" y="${currentY + h/2 + 1}" fill="var(--text-main)" font-size="12" font-weight="bold" dominant-baseline="middle" text-anchor="middle" style="paint-order: stroke; stroke: var(--bg-main); stroke-width: 3px;">${labelText}</text>`;
                 }
             }
             currentY += h;
@@ -823,3 +857,6 @@ export const GeometryManager = {
         Object.keys(configs).sort().forEach(name => select.innerHTML += `<option value="${name}">${name}</option>`);
     }
 };
+
+
+

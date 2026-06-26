@@ -1,5 +1,5 @@
-import { simulateTMM } from './tmm2x2Engine.js?v=50';
-import { Complex, getEps, getNK, getNKAtWave } from './materials_database.js?v=50';
+import { simulateTMM } from './tmm2x2Engine.js?v=53';
+import { Complex, getEps, getNK, getNKAtWave } from './materials_database.js?v=53';
 
 
 // --- PRNG pt Reproductibilitate ---
@@ -148,7 +148,29 @@ export class Evaluator {
         this.constraints = (config.constraints || []).map(c => {
             try {
                 const func = new Function(...this.metricIds, 'return ' + c.formula);
-                return { func, formula: c.formula };
+                
+                let penaltyFunc = null;
+                const match = c.formula.match(/^\s*([a-zA-Z0-9_]+)\s*(<|<=|>|>=)\s*([0-9.eE+-]+)\s*$/);
+                if (match) {
+                    const metricName = match[1];
+                    const op = match[2];
+                    const limit = parseFloat(match[3]);
+                    const metricIdx = this.metricIds.indexOf(metricName);
+                    
+                    if (metricIdx !== -1) {
+                        penaltyFunc = (...metrics) => {
+                            const val = metrics[metricIdx];
+                            let violation = 0;
+                            if ((op === '<' || op === '<=') && val > limit) violation = val - limit;
+                            if ((op === '>' || op === '>=') && val < limit) violation = limit - val;
+                            
+                            if (violation > 0) return 1e6 + violation * 1e5;
+                            return 0;
+                        };
+                    }
+                }
+                
+                return { func, penaltyFunc, formula: c.formula };
             } catch (e) {
                 return null;
             }
@@ -191,43 +213,50 @@ export class Evaluator {
 
     computeSingleMetric(metric, response, layers) {
         const { type, xMin, xMax, deltaN } = metric;
-        const xArr = response.x;
+        let xArr = response.x;
+        
+        let startIndex = 0;
+        let endIndex = xArr.length - 1;
+
+        if (typeof xMin !== 'undefined' && typeof xMax !== 'undefined') {
+            const numXMin = Number(xMin);
+            const numXMax = Number(xMax);
+            for (let i = 0; i < xArr.length; i++) {
+                if (xArr[i] >= numXMin) { startIndex = i; break; }
+            }
+            for (let i = xArr.length - 1; i >= 0; i--) {
+                if (xArr[i] <= numXMax) { endIndex = i; break; }
+            }
+        }
+        
+        xArr = xArr.subarray(startIndex, endIndex + 1);
+        const subRes = {
+            x: xArr,
+            R: response.R.subarray(startIndex, endIndex + 1),
+            T: response.T.subarray(startIndex, endIndex + 1),
+            A: response.A.subarray(startIndex, endIndex + 1),
+            phaseR: response.phaseR.subarray(startIndex, endIndex + 1),
+            phaseT: response.phaseT.subarray(startIndex, endIndex + 1)
+        };
+
+        if (xArr.length === 0) return 999;
         
         if (type === 'curvefit') {
             let error = 0;
             const targetParam = metric.curvefitParam || 'R';
-            const targetArr = response[targetParam] || response.R; 
+            const targetArr = subRes[targetParam] || subRes.R; 
             const targetComponents = (this.config.targetComponentsMap && this.config.targetComponentsMap[metric.id]) ? this.config.targetComponentsMap[metric.id] : [];
 
             for (let i = 0; i < xArr.length; i++) {
                 const currentX = xArr[i];
-                let isInsideStep = false;
-                let stepGoal = 'maximize';
-                
-                for (const comp of targetComponents) {
-                    if (comp.type === 'step' && currentX >= comp.xmin && currentX <= comp.xmax) {
-                        isInsideStep = true;
-                        stepGoal = comp.stepGoal || 'maximize';
-                        break;
-                    }
-                }
-
-                if (isInsideStep) {
-                    if (stepGoal === 'maximize') {
-                        error -= targetArr[i]; 
-                    } else {
-                        error += targetArr[i]; 
-                    }
-                } else {
-                    const targetY = evaluateTargetModel(currentX, targetComponents);
-                    error += Math.pow(targetArr[i] - targetY, 2);
-                }
+                const targetY = evaluateTargetModel(currentX, targetComponents);
+                error += Math.pow(targetArr[i] - targetY, 2);
             }
             return error / xArr.length;
         }
         
         if (type === 'FWHM') {
-            const yArr = response.R;
+            const yArr = subRes.R;
             const minVal = Math.min(...yArr);
             const minIdx = yArr.indexOf(minVal);
             const baseline = Math.max(...yArr);
@@ -239,33 +268,53 @@ export class Evaluator {
             return rightX - leftX;
         }
 
-        const findTrueMin = (xArr, yArr) => {
+        if (type === 'BandCenter') {
+            const yArr = subRes.R;
+            const maxVal = Math.max(...yArr);
+            const maxIdx = yArr.indexOf(maxVal);
+            return xArr[maxIdx];
+        }
+
+        if (type === 'BandgapWidth') {
+            const yArr = subRes.R;
+            const maxVal = Math.max(...yArr);
+            const maxIdx = yArr.indexOf(maxVal);
+            const baseline = Math.min(...yArr);
+            const halfMax = baseline + (maxVal - baseline) / 2;
+            
+            let leftX = xArr[0], rightX = xArr[xArr.length-1];
+            for (let i = maxIdx; i >= 0; i--) if (yArr[i] < halfMax) { leftX = xArr[i]; break; }
+            for (let i = maxIdx; i < yArr.length; i++) if (yArr[i] < halfMax) { rightX = xArr[i]; break; }
+            return rightX - leftX;
+        }
+
+        const findTrueMin = (xA, yA) => {
             let minIdx = 0, minVal = Infinity;
-            for (let i = 0; i < yArr.length; i++) {
-                if (Number.isFinite(yArr[i]) && yArr[i] < minVal) { minVal = yArr[i]; minIdx = i; }
+            for (let i = 0; i < yA.length; i++) {
+                if (Number.isFinite(yA[i]) && yA[i] < minVal) { minVal = yA[i]; minIdx = i; }
             }
-            if (minIdx === 0 || minIdx === yArr.length - 1) return xArr[minIdx];
-            const x0 = xArr[minIdx], dx = xArr[minIdx] - xArr[minIdx - 1];
-            const y_1 = yArr[minIdx - 1], y0 = yArr[minIdx], y1 = yArr[minIdx + 1];
+            if (minIdx === 0 || minIdx === yA.length - 1) return xA[minIdx];
+            const x0 = xA[minIdx], dx = xA[minIdx] - xA[minIdx - 1];
+            const y_1 = yA[minIdx - 1], y0 = yA[minIdx], y1 = yA[minIdx + 1];
             const denom = y1 - 2 * y0 + y_1;
             return denom === 0 ? x0 : x0 - (dx / 2) * ((y1 - y_1) / denom);
         };
 
         if (type === 'Sensitivity') {
-            const x1 = findTrueMin(response.x, response.R);
-
+            const x1 = findTrueMin(subRes.x, subRes.R);
             const targetLayerIdx = typeof metric.layerIdx !== 'undefined' ? metric.layerIdx : layers.length - 1; 
-            
             const sensResponse = this.runSimulationSequence(layers, this.config.sim, { layerIdx: targetLayerIdx, deltaN: deltaN });
             
-            const x2 = findTrueMin(sensResponse.x, sensResponse.R);
+            // Re-apply interval for sensitivity response to ensure valid comparison
+            const sSubX = sensResponse.x.subarray(startIndex, endIndex + 1);
+            const sSubR = sensResponse.R.subarray(startIndex, endIndex + 1);
+            const x2 = findTrueMin(sSubX, sSubR);
             
-            return Math.abs(x2 - x1) / deltaN;
+            return Math.abs((x2 - x1) / deltaN);
         }
 
         if (type === 'FOM') {
-            // First calculate FWHM
-            const yArr = response.R;
+            const yArr = subRes.R;
             const minVal = Math.min(...yArr);
             const minIdx = yArr.indexOf(minVal);
             const baseline = Math.max(...yArr);
@@ -276,7 +325,6 @@ export class Evaluator {
             for (let i = minIdx; i < yArr.length; i++) if (yArr[i] > halfMax) { rightX = xArr[i]; break; }
             const fwhm = rightX - leftX;
 
-            // Then calculate Sensitivity
             const x1 = xArr[minIdx];
             const sensLayers = JSON.parse(JSON.stringify(layers));
             const targetLayerIdx = typeof metric.layerIdx !== 'undefined' ? metric.layerIdx : sensLayers.length - 1; 
@@ -287,29 +335,29 @@ export class Evaluator {
             this.config.materialsDB['_TEMP_SENS_'] = { type: 'constant', n: baseNk.n + deltaN, k: baseNk.k };
 
             const sensResponse = this.runSimulationSequence(sensLayers, this.config.sim);
-            const minIdx2 = sensResponse.R.indexOf(Math.min(...sensResponse.R));
-            const x2 = sensResponse.x[minIdx2];
+            const sSubX = sensResponse.x.subarray(startIndex, endIndex + 1);
+            const sSubR = sensResponse.R.subarray(startIndex, endIndex + 1);
+            const minIdx2 = sSubR.indexOf(Math.min(...sSubR));
+            const x2 = sSubX[minIdx2];
             
-            const sensitivity = Math.abs(x2 - x1) / deltaN;
-            
+            const sensitivity = Math.abs((x2 - x1) / deltaN);
             return fwhm > 0 ? sensitivity / fwhm : 0;
         }
 
         if (type === 'ResonancePosition') {
-            const minIdx = response.R.indexOf(Math.min(...response.R));
+            const minIdx = subRes.R.indexOf(Math.min(...subRes.R));
             return xArr[minIdx];
         }
 
         if (type.startsWith('MaxPhaseDerivative')) {
             const param = type.replace('MaxPhaseDerivative', '');
-            const phaseArr = response['phase' + param];
+            const phaseArr = subRes['phase' + param];
             if (!phaseArr) return 0;
             
             let maxDerivative = 0;
             for (let i = 1; i < xArr.length - 1; i++) {
                 const dx = xArr[i+1] - xArr[i-1];
                 if (dx === 0) continue;
-                // Unwrap phase difference if needed (assuming phase is in degrees)
                 let dPhase = phaseArr[i+1] - phaseArr[i-1];
                 if (dPhase > 180) dPhase -= 360;
                 else if (dPhase < -180) dPhase += 360;
@@ -322,29 +370,15 @@ export class Evaluator {
 
         if (type.startsWith('Average')) {
             const param = type.replace('Average', '');
-            const yArr = response[param];
+            const yArr = subRes[param];
             let sum = 0;
-            let count = 0;
-            for (let i = 0; i < xArr.length; i++) {
-                if (xArr[i] >= xMin && xArr[i] <= xMax) {
-                    sum += yArr[i];
-                    count++;
-                }
-            }
-            return count > 0 ? sum / count : 999;
+            for (let i = 0; i < yArr.length; i++) sum += yArr[i];
+            return sum / yArr.length;
         }
 
-        const yArr = response[type];
-        let minInInterval = Infinity;
-        let found = false;
-        
-        for (let i = 0; i < xArr.length; i++) {
-            if (xArr[i] >= xMin && xArr[i] <= xMax) {
-                if (yArr[i] < minInInterval) minInInterval = yArr[i];
-                found = true;
-            }
-        }
-        return found ? minInInterval : 999;
+        const yArr = subRes[type];
+        if (!yArr) return 999;
+        return Math.min(...yArr);
     }
 
     evaluateGenome(genome) {
@@ -372,7 +406,6 @@ export class Evaluator {
                     dbrParams.materials.forEach(m => { if (m.material === matName) m.d = val; });
                     if (dbrParams.hasDefect && dbrParams.defect.material === matName) dbrParams.defect.d = val;
                 }
-                rebuildDBR = true;
             } else {
                 if (layers[v.layerIndex]) {
                     if (v.param === 'count') layers[v.layerIndex][v.param] = Math.max(1, Math.round(val));
@@ -405,8 +438,13 @@ export class Evaluator {
         
         let penalty = 0;
         for (let c of this.constraints) {
-            try { if (!c.func(...metricValues)) penalty += 1e6; } 
-            catch(e) { penalty += 1e6; }
+            try {
+                if (c.penaltyFunc) {
+                    penalty += c.penaltyFunc(...metricValues);
+                } else {
+                    if (!c.func(...metricValues)) penalty += 1e6;
+                }
+            } catch(e) { penalty += 1e6; }
         }
 
         const objectives = this.globalObjectives.map(go => {
