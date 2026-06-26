@@ -249,6 +249,8 @@ body {
     gap: 6px;
     overflow-x: auto;
     padding-bottom: 4px; 
+    flex: 1;
+    min-width: 0;
 }
 
 .config-stack::-webkit-scrollbar { height: 4px; }
@@ -706,34 +708,44 @@ button[style*="var(--bg-main)"], button[style*="var(--bg-card)"] {
         overflow-y: auto;
     }
     
+    /* Force all layout wrappers inside tabs to be flexible and scrollable on mobile */
+    .tab-pane > div,
+    .tab-pane > div > div,
+    .tab-pane > div > div > div {
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        overflow-y: visible !important;
+    }
+    
     /* Make tab inner layouts stack vertically */
-    .tab-pane div[style*="display: flex; gap: 20px"] {
+    .mobile-stack-row,
+    .tab-pane div[style*="display: flex; gap: 20px"],
+    .tab-pane div[style*="display: flex; gap: 30px"] {
         flex-direction: column !important;
         height: auto !important;
         min-height: auto !important;
         overflow-y: visible !important;
     }
     
-    /* Expand sidebars (left) to full width */
-    .tab-pane div[style*="width: 360px"],
-    .tab-pane div[style*="width: 300px"],
-    .tab-pane div[style*="width: 320px"],
-    .tab-pane div[style*="width: 350px"],
-    .tab-pane div[style*="width: 400px"] {
+    /* Expand sidebars and graph containers to full width */
+    .mobile-col-full {
         width: 100% !important;
         flex: none !important;
         height: auto !important;
         max-height: none !important;
         padding-right: 0 !important;
     }
-    
-    /* Expand graph containers (right) to full width */
-    .tab-pane div[style*="flex: 1"] {
+
+    /* Keep the old fallbacks just in case */
+    .tab-pane div[style*="width: 360px"] {
         width: 100% !important;
         flex: none !important;
         height: auto !important;
+        max-height: none !important;
         padding-right: 0 !important;
     }
+    /* Removed generic div[style*="flex: 1"] to avoid collapsing absolute Plotly charts */
 
     /* Ensure forms and cards wrap nicely */
     .module-card {
