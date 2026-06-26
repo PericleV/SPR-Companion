@@ -187,10 +187,10 @@ export const SimulationManager = {
                 </div>
 
                 <!-- MAIN Section: Left Toolbar & Right Graphs -->
-                <div style="display: flex; gap: 20px; flex: 1; min-height: 0;">
+                <div class="mobile-stack-row" style="display: flex; gap: 20px; flex: 1; min-height: 0;">
                     
                     <!-- Analysis Sidebar -->
-                    <div style="width: 360px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding-right: 5px;">
+                    <div class="mobile-col-full" style="width: 360px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding-right: 5px;">
                         
                         <!-- Data Analysis -->
                         <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
@@ -276,7 +276,7 @@ export const SimulationManager = {
                     </div>
 
                     <!-- Graph Container (Principal & Field) -->
-                    <div style="flex: 1; display: flex; flex-direction: column; gap: 25px; overflow-y: auto; padding-right: 15px; padding-bottom: 20px;">
+                    <div class="mobile-col-full" style="flex: 1; display: flex; flex-direction: column; gap: 25px; overflow-y: auto; padding-right: 15px; padding-bottom: 20px;">
                         
                         <!-- Main Graph -->
                         <div style="flex: 0 0 400px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 15px;">

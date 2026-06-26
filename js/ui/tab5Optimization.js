@@ -81,10 +81,10 @@ export const OptimizationManager = {
                 #optimization-container details[open] summary .toggle-arrow { transform: rotate(180deg); }
             </style>
             
-            <div style="display: flex; gap: 20px; height: 100%; overflow: hidden;">
+            <div class="mobile-stack-row" style="display: flex; gap: 20px; height: 100%; overflow: hidden;">
                 
                 <!-- Left Column: Optimization Configuration -->
-                <div style="width: 440px; display: flex; flex-direction: column; gap: 25px; overflow-y: auto; padding-right: 10px; padding-bottom: 20px; flex-shrink: 0;">
+                <div class="mobile-col-full" style="width: 360px; display: flex; flex-direction: column; gap: 25px; overflow-y: auto; padding-right: 10px; padding-bottom: 20px; flex-shrink: 0;">
                     
                     <div id="opt-sync-warning" class="bg-warning text-main" style="display: none; padding: 10px; border-radius: 6px; border: 1px solid var(--color-warning-alt); font-size: 0.9rem;">
                         <i class="fa-solid fa-triangle-exclamation"></i> Stack configuration changed. Results may be out of date. Please re-run the optimization.

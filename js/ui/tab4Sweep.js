@@ -77,7 +77,7 @@ export const SweepManager = {
             <div style="display: flex; gap: 30px; height: 100%;">
                 
                 <!-- Configuration Panel -->
-                <div style="width: 380px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto;">
+                <div class="mobile-col-full" style="width: 360px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto;">
                     
                     <div id="sweep-sync-warning" class="bg-warning text-main" style="display: none; padding: 10px; border-radius: 6px; border: 1px solid var(--color-warning-alt); font-size: 0.9rem;">
                         <i class="fa-solid fa-triangle-exclamation"></i> Stack configuration changed. Results may be out of date. Please re-run the sweep.
@@ -218,15 +218,15 @@ export const SweepManager = {
                         <div style="background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
                             <h4 style="color: var(--text-main); margin: 0 0 15px 0; font-size: 0.95rem;"><i class="fa-solid fa-crosshairs"></i> 2D Heatmap Cross-Section Profiles</h4>
                             
-                            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                                <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+                            <div class="mobile-stack-row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                <div class="mobile-col-full" style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
                                     <div style="display: flex; justify-content: space-between;">
                                         <label style="font-size: 0.8rem; color: var(--text-muted);">Horizontal Slice at Y = <span id="sweep-val-y-label" style="color: var(--accent-blue); font-weight: bold;">-</span></label>
                                     </div>
                                     <input type="range" id="sweep-slider-y" min="0" max="0" value="0" style="width: 100%;">
                                 </div>
                                 
-                                <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+                                <div class="mobile-col-full" style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
                                     <div style="display: flex; justify-content: space-between;">
                                         <label style="font-size: 0.8rem; color: var(--text-muted);">Vertical Slice at X = <span id="sweep-val-x-label" style="color: var(--accent-blue); font-weight: bold;">-</span></label>
                                     </div>

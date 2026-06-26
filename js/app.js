@@ -278,12 +278,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const configBar = document.getElementById('global-config-bar');
     if (configBar) configBar.style.display = 'none'; // Initially hidden on Home tab
 
+    // --- Mobile Menu Logic ---
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    const mobileOverlay = document.getElementById('mobile-overlay');
+
+    function closeSidebar() {
+        if (sidebar && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+            if (mobileOverlay) mobileOverlay.classList.remove('active');
+        }
+    }
+
+    if (mobileMenuToggle && sidebar && mobileOverlay) {
+        mobileMenuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            mobileOverlay.classList.toggle('active');
+            setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 300);
+        });
+        mobileOverlay.addEventListener('click', closeSidebar);
+    }
+
     // 3. Navigation Logic and Plotly Dimensions Fix
     const navLinks = document.querySelectorAll('.nav-links li');
     const tabPanes = document.querySelectorAll('.tab-pane');
 
     navLinks.forEach(link => {
         link.addEventListener('click', () => {
+            closeSidebar(); // Ensure it closes on mobile
             navLinks.forEach(li => li.classList.remove('active'));
             tabPanes.forEach(pane => pane.classList.remove('active'));
             

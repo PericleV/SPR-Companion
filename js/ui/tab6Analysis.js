@@ -35,7 +35,7 @@ export const AnalysisManager = {
 
     renderUI() {
         this.container.innerHTML = `
-            <div style="display: flex; gap: 20px; height: 100%; min-height: 600px;">
+            <div class="mobile-stack-row" style="display: flex; gap: 20px; height: 100%; min-height: 600px;">
                 
                 <!-- Left Panel: Controls -->
                 <div style="flex: 0 0 300px; display: flex; flex-direction: column; gap: 15px; background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); overflow-y: auto;">

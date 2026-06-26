@@ -117,7 +117,7 @@ export const GeometryManager = {
         let html = `
             <div style="display: flex; gap: 30px; height: 100%; overflow: hidden;">
                 <!-- Left Column: Settings, DBR Builder, Layers (Scrollable) -->
-                <div style="width: 500px; display: flex; flex-direction: column; gap: 25px; overflow-y: auto; padding-right: 10px; padding-bottom: 20px;">
+                <div class="mobile-col-full" style="width: 360px; display: flex; flex-direction: column; gap: 25px; overflow-y: auto; padding-right: 10px; padding-bottom: 20px;">
                     
                     <!-- Dynamic Optimization Notification & Comparison Banner -->
                     <div id="opt-notification-banner" style="display: none; flex-direction: column; gap: 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent-green); padding: 15px; border-radius: 12px; margin-bottom: 0px; font-size: 0.85rem; color: var(--text-main); flex-shrink: 0;">
@@ -586,7 +586,7 @@ export const GeometryManager = {
                 const matNames = item.sequence.slice(0, item.seqLen).map(l => l.material).join(' / ');
                 previewDiv.innerHTML += `
                     <div style="display: flex; flex-direction: row; width: 100%; flex: ${groupFlex} 1 0%; position: relative;">
-                        <div style="flex: 1; display: flex; flex-direction: column;">
+                        <div class="mobile-col-full" style="flex: 1; display: flex; flex-direction: column;">
                             ${innerHTML}
                         </div>
                         <div style="position: absolute; right: -12px; top: 0; bottom: 0; width: 8px; border-top: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); border-right: 2px solid var(--text-muted); border-radius: 0 4px 4px 0;"></div>

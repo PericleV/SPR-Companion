@@ -122,10 +122,10 @@ export const MaterialsManager = {
         if (!this.container) return;
 
         this.container.innerHTML = `
-            <div style="display: flex; gap: 20px; height: 100%; overflow: hidden;">
+            <div class="mobile-stack-row" style="display: flex; gap: 20px; height: 100%; overflow: hidden;">
                 
                 <!-- Left Column: Materials List -->
-                <div style="width: 420px; display: flex; flex-direction: column; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; flex-shrink: 0;">
+                <div class="mobile-col-full" style="width: 360px; display: flex; flex-direction: column; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; flex-shrink: 0;">
                     <div style="padding: 15px; border-bottom: 1px solid var(--border-color); background: var(--bg-sidebar);">
                         <h3 style="color: var(--text-main); margin: 0; font-size: 1.1rem;"><i class="fa-solid fa-database"></i> Library</h3>
                     </div>
@@ -143,7 +143,7 @@ export const MaterialsManager = {
                 </div>
 
                 <!-- Central Column: Details and Plot (Unified) -->
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding-right: 5px;">
+                <div class="mobile-col-full" style="flex: 1; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding-right: 5px;">
                     
                     <div style="background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 15px;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
