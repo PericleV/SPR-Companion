@@ -70,7 +70,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 5px;">
                     <span id="theme-label" style="font-size: 0.8rem; font-weight: bold; color: var(--text-muted);">Theme: Dark</span>
                     <button id="btn-theme-toggle" style="background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                        Switch
+                        <i class="fa-solid fa-moon"></i> Switch
                     </button>
                 </div>
                 <div style="text-align: center; margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
@@ -87,6 +87,18 @@
 
         <!-- Main Content Area -->
         <main class="main-content">
+            
+            <!-- Mobile Header (Hidden on Desktop) -->
+            <div class="mobile-header">
+                <button id="mobile-menu-toggle" class="mobile-menu-btn" aria-label="Toggle Menu"><i class="fa-solid fa-bars"></i></button>
+                <div class="mobile-logo">
+                    <img src="SPR-companion-logo.svg" alt="Logo">
+                    <span>SPR Companion</span>
+                </div>
+            </div>
+            
+            <!-- Mobile Overlay -->
+            <div id="mobile-overlay" class="mobile-overlay"></div>
             
             <!-- NEW: Global Configuration Bar -->
             <div id="global-config-bar" class="global-config-bar">
