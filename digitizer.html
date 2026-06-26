@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Digitizer - SPR Companion</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #12121c;
+            --bg-card: #1e1e2e;
+            --bg-sidebar: #181825;
+            --text-main: #f8f8f2;
+            --text-muted: #a6accd;
+            --accent-blue: #3b82f6;
+            --border-color: #313244;
+            --input-bg: #2a2a35;
+            --input-border: #444;
+        }
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-main); color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex; height: 100vh; overflow: hidden;
+        }
+        #sidebar {
+            width: 380px;
+            background: var(--bg-card); border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; overflow-y: auto;
+        }
+        #canvas-container {
+            flex: 1; position: relative; background: #000; overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+        }
+        canvas { cursor: crosshair; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+        .control-group {
+            background: rgba(128,128,128,0.05); padding: 12px; border-radius: 6px;
+            border: 1px solid var(--border-color); margin-bottom: 12px;
+        }
+        .control-group h3 { margin: 0 0 10px 0; font-size: 0.9rem; }
+        input, select {
+            width: 100%; padding: 6px; background: var(--input-bg); color: var(--text-main);
+            border: 1px solid var(--input-border); border-radius: 4px; box-sizing: border-box;
+        }
+        button { cursor: pointer; font-family: 'Inter', sans-serif; }
+        .btn-action {
+            width: 100%; padding: 10px; background: var(--accent-blue);
+            color: white; border: none; border-radius: 4px; font-weight: bold; transition: opacity 0.2s;
+        }
+        .btn-action:hover { opacity: 0.9; }
+        
+        #overlay-msg {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 15px 30px;
+            border-radius: 8px; font-size: 1rem; text-align: center; border: 1px solid #555; z-index: 10; display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .ds-row {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--input-bg); padding: 6px 10px; margin-bottom: 4px; border-radius: 4px;
+            font-size: 0.8rem; cursor: pointer; border: 1px solid transparent;
+        }
+        .ds-row.active { border-color: var(--accent-blue); background: #3b82f633; }
+        .ds-color { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+    </style>
+    <script>
+        function applyTheme() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            if (theme === 'light') {
+                document.documentElement.style.setProperty('--bg-main', '#F3F4F6');
+                document.documentElement.style.setProperty('--bg-card', '#FFFFFF');
+                document.documentElement.style.setProperty('--bg-sidebar', '#FFFFFF');
+                document.documentElement.style.setProperty('--text-main', '#111827');
+                document.documentElement.style.setProperty('--text-muted', '#4B5563');
+                document.documentElement.style.setProperty('--border-color', '#D1D5DB');
+                document.documentElement.style.setProperty('--input-bg', '#FFFFFF');
+                document.documentElement.style.setProperty('--input-border', '#D1D5DB');
+            } else {
+                document.documentElement.style.setProperty('--bg-main', '#121212');
+                document.documentElement.style.setProperty('--bg-card', '#202020');
+                document.documentElement.style.setProperty('--bg-sidebar', '#181818');
+                document.documentElement.style.setProperty('--text-main', '#F9FAFB');
+                document.documentElement.style.setProperty('--text-muted', '#A1A1AA');
+                document.documentElement.style.setProperty('--border-color', '#333333');
+                document.documentElement.style.setProperty('--input-bg', '#2c2c2c');
+                document.documentElement.style.setProperty('--input-border', '#444');
+            }
+        }
+        applyTheme();
+        window.addEventListener('storage', (e) => { if (e.key === 'theme') applyTheme(); });
+    </script>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2 style="margin: 0 0 15px 0; font-size: 1.2rem; color: var(--text-main);">
+            <i class="fa-solid fa-crosshairs"></i> Multi-Curve Digitizer
+        </h2>
+        
+        <label style="display: block; width: 100%; padding: 10px; background: var(--accent-green, #10b981); color: white; text-align: center; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 15px; box-sizing: border-box; transition: background 0.2s;">
+            <i class="fa-solid fa-upload"></i> Upload Image
+            <input type="file" id="upload" accept="image/*" style="display: none;">
+        </label>
+        
+        <div id="controls" style="display: none; flex-direction: column;">
+            
+            <!-- Axes Calibrations -->
+            <div class="control-group" style="padding-bottom: 8px;">
+                <h3 style="color: #a78bfa; margin-bottom: 5px;"><i class="fa-solid fa-arrows-left-right"></i> X-Axis Grid</h3>
+                <select id="x-type" style="margin-bottom: 8px; font-size: 0.8rem;">
+                    <optgroup label="Wavelength">
+                        <option value="wavelength_nm">Wavelength (nm)</option>
+                        <option value="wavelength_um">Wavelength (μm)</option>
+                        <option value="wavelength_cm">Wavelength (cm)</option>
+                        <option value="wavelength_m">Wavelength (m)</option>
+                    </optgroup>
+                    <optgroup label="Frequency">
+                        <option value="freq_hz">Frequency (Hz)</option>
+                        <option value="freq_mhz">Frequency (MHz)</option>
+                        <option value="freq_ghz">Frequency (GHz)</option>
+                        <option value="freq_thz">Frequency (THz)</option>
+                    </optgroup>
+                    <optgroup label="Energy">
+                        <option value="energy_mev">Energy (meV)</option>
+                        <option value="energy_ev">Energy (eV)</option>
+                        <option value="energy_mev_mega">Energy (MeV)</option>
+                    </optgroup>
+                    <optgroup label="Wavenumber">
+                        <option value="wavenumber_cm">Wavenumber (cm⁻¹)</option>
+                    </optgroup>
+                </select>
+                <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+                    <div style="flex: 1;"><input type="number" id="vx1" value="300" placeholder="Min" style="font-size:0.8rem;"></div>
+                    <div style="flex: 1;"><input type="number" id="vx2" value="1200" placeholder="Max" style="font-size:0.8rem;"></div>
+                </div>
+                <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="x-log"> Logarithmic Scale</label>
+            </div>
+
+            <div class="control-group" style="padding-bottom: 8px;">
+                <h3 style="color: #34d399; margin-bottom: 5px;"><i class="fa-solid fa-arrows-up-down"></i> Y-Axis Grid</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+                    <div style="flex: 1;"><input type="number" id="vy1" value="0.0" step="0.1" placeholder="Min" style="font-size:0.8rem;"></div>
+                    <div style="flex: 1;"><input type="number" id="vy2" value="2.0" step="0.1" placeholder="Max" style="font-size:0.8rem;"></div>
+                </div>
+                <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="y-log"> Logarithmic Scale</label>
+            </div>
+
+            <div class="control-group" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); padding: 8px;">
+                <div id="status" style="font-size: 0.8rem; font-weight: bold; margin-bottom: 8px;">Status: Ready</div>
+                <button id="btn-calibrate" class="btn-action" style="padding: 8px; font-size: 0.85rem;">Calibrate Axes</button>
+            </div>
+
+            <!-- Dataset Manager -->
+            <div class="control-group" style="flex: 1; display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin: 0; color: #f472b6;"><i class="fa-solid fa-layer-group"></i> Data Curves</h3>
+                    <button id="btn-add-ds" style="background: none; border: none; color: #34d399; font-size: 0.8rem;"><i class="fa-solid fa-plus"></i> Add Curve</button>
+                </div>
+                
+                <div id="ds-list" style="margin-bottom: 10px; flex: 1; overflow-y: auto; max-height: 100px;"></div>
+
+                <!-- Active Dataset Edit -->
+                <div id="active-ds-edit" style="display: none; background: var(--input-bg); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 0.8rem; font-weight: bold;">Active Curve Type:</span>
+                        <button id="btn-clear-ds" style="background: none; border: none; color: #ef4444; font-size: 0.75rem;"><i class="fa-solid fa-trash"></i> Clear Pts</button>
+                    </div>
+                    <select id="ds-y-type" style="font-size: 0.8rem; margin-bottom: 10px;">
+                        <option value="n">Refractive Index (n)</option>
+                        <option value="k">Extinction Coeff. (k)</option>
+                        <option value="eps_r">Permittivity Real (ε_r)</option>
+                        <option value="eps_i">Permittivity Imag. (ε_i)</option>
+                    </select>
+
+                    <div style="border-top: 1px dashed var(--border-color); padding-top: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <span style="font-size: 0.8rem; font-weight: bold; color: #facc15;"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Trace</span>
+                            <button id="btn-auto-trace" style="background: rgba(250, 204, 21, 0.2); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.4); border-radius: 4px; padding: 4px 8px; font-size: 0.7rem;">Activate</button>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 5px;">
+                            <label style="font-size: 0.7rem; width: 60px;">Tolerance:</label>
+                            <input type="range" id="trace-tol" min="0" max="150" value="40" style="flex: 1;">
+                            <span id="trace-tol-val" style="font-size: 0.7rem; width: 25px; text-align: right;">40</span>
+                        </div>
+                        <div id="trace-colors-container" style="display: none; flex-direction: column; gap: 5px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Target Colors: <span id="trace-color-list">None</span></div>
+                            <button id="btn-execute-trace" style="background: #10b981; color: white; border: none; border-radius: 4px; padding: 6px; font-size: 0.8rem; font-weight: bold;">Run Trace</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-export" style="width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 1rem;">
+                <i class="fa-solid fa-paper-plane"></i> Interpolate & Export
+            </button>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+        <div id="overlay-msg">
+            <div id="overlay-text" style="margin-bottom: 10px;"></div>
+            <button id="btn-confirm-pt" style="background: #10b981; color: white; padding: 6px 15px; border: none; border-radius: 4px; font-weight: bold; display: none;">Confirm Point</button>
+        </div>
+        <div style="position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.6); color: #ccc; padding: 10px; border-radius: 8px; font-size: 0.8rem; pointer-events: none; text-align: right; line-height: 1.4;">
+            <b>Scroll:</b> Zoom<br>
+            <b>Mid-Click / Shift+Drag:</b> Pan<br>
+            <b>Right-Click:</b> Delete Point
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('overlay-msg');
+        const overlayText = document.getElementById('overlay-text');
+        const btnConfirmPt = document.getElementById('btn-confirm-pt');
+        const statusEl = document.getElementById('status');
+        const btnCalib = document.getElementById('btn-calibrate');
+        const btnAutoTrace = document.getElementById('btn-auto-trace');
+        const tolSlider = document.getElementById('trace-tol');
+        const tolVal = document.getElementById('trace-tol-val');
+        
+        let image = null;
+        let imgData = null; // raw pixel data for Auto-Trace
+        let zoom = 1.0;
+        let panX = 0, panY = 0;
+        let isDragging = false;
+        let dragStartX = 0, dragStartY = 0;
+        
+        const STATES = { IDLE: 0, CALIB_X1: 1, CALIB_X2: 2, CALIB_Y1: 3, CALIB_Y2: 4, PICKING: 5, AUTO_TRACE_BOX: 6, AUTO_TRACE_COLOR: 7 };
+        let state = STATES.IDLE;
+        
+        let traceBox = null;
+        let traceColors = [];
+        let globalMouseX = null, globalMouseY = null;
+        
+        const calib = { x1: null, x2: null, y1: null, y2: null, vx1: 0, vx2: 100, vy1: 0, vy2: 100, xLog: false, yLog: false, xType: 'wavelength_nm' };
+        let tempCalibPt = null; // For fool-proof lock
+
+        // Multi-curve logic
+        const COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+        let datasets = [];
+        let activeDsId = 0;
+        let dsCounter = 0;
+
+        function addDataset() {
+            const id = dsCounter++;
+            datasets.push({
+                id: id,
+                type: datasets.length === 0 ? 'n' : 'k',
+                color: COLORS[id % COLORS.length],
+                points: []
+            });
+            activeDsId = id;
+            renderDsList();
+        }
+
+        function getActiveDs() { return datasets.find(d => d.id === activeDsId); }
+
+        function renderDsList() {
+            const list = document.getElementById('ds-list');
+            list.innerHTML = datasets.map(ds => `
+                <div class="ds-row ${ds.id === activeDsId ? 'active' : ''}" data-id="${ds.id}">
+                    <div style="display:flex; align-items:center;">
+                        <span class="ds-color" style="background:${ds.color}"></span>
+                        <span>Curve: ${ds.type} (<span style="color:#10b981;font-weight:bold">${ds.points.length}</span> pts)</span>
+                    </div>
+                    ${datasets.length > 1 ? `<i class="fa-solid fa-trash btn-del-ds" style="color:#ef4444; padding:4px;" data-id="${ds.id}"></i>` : ''}
+                </div>
+            `).join('');
+
+            const act = getActiveDs();
+            if (act) {
+                document.getElementById('active-ds-edit').style.display = 'block';
+                document.getElementById('ds-y-type').value = act.type;
+            } else {
+                document.getElementById('active-ds-edit').style.display = 'none';
+            }
+        }
+
+        document.getElementById('ds-list').addEventListener('click', (e) => {
+            const row = e.target.closest('.ds-row');
+            if (!row) return;
+            const id = parseInt(row.dataset.id);
+            if (e.target.classList.contains('btn-del-ds')) {
+                datasets = datasets.filter(d => d.id !== id);
+                if (activeDsId === id && datasets.length > 0) activeDsId = datasets[0].id;
+                renderDsList(); draw();
+                return;
+            }
+            activeDsId = id;
+            if (state === STATES.AUTO_TRACE_BOX || state === STATES.AUTO_TRACE_COLOR) setState(STATES.PICKING);
+            renderDsList();
+        });
+
+        document.getElementById('btn-add-ds').addEventListener('click', () => { addDataset(); });
+        document.getElementById('ds-y-type').addEventListener('change', (e) => {
+            const act = getActiveDs();
+            if(act) { act.type = e.target.value; renderDsList(); }
+        });
+        document.getElementById('btn-clear-ds').addEventListener('click', () => {
+            const act = getActiveDs();
+            if(act) { act.points = []; renderDsList(); draw(); }
+        });
+
+        tolSlider.addEventListener('input', (e) => { tolVal.innerText = e.target.value; });
+
+        function updateTraceColorsUI() {
+            const list = document.getElementById('trace-color-list');
+            if (traceColors.length === 0) { list.innerHTML = 'None'; return; }
+            list.innerHTML = traceColors.map(c => `<span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:rgb(${c.r},${c.g},${c.b}); border:1px solid #fff; margin-right:2px; vertical-align:middle;"></span>`).join('');
+        }
+
+        document.getElementById('btn-execute-trace').addEventListener('click', () => {
+            if (traceBox && traceColors.length > 0) {
+                executeAutoTrace();
+            } else {
+                alert("Please draw a box and pick at least one color.");
+            }
+        });
+
+        btnAutoTrace.addEventListener('click', () => {
+            if (state === STATES.AUTO_TRACE_BOX || state === STATES.AUTO_TRACE_COLOR) {
+                setState(STATES.PICKING);
+            } else if (state === STATES.PICKING) {
+                setState(STATES.AUTO_TRACE_BOX);
+            } else {
+                alert("Please calibrate axes first.");
+            }
+        });
+
+        document.getElementById('upload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const img = new Image();
+            img.onload = () => {
+                image = img;
+                // Generate raw pixel data for Auto-Trace
+                const hc = document.createElement('canvas');
+                hc.width = image.width; hc.height = image.height;
+                const hctx = hc.getContext('2d');
+                hctx.drawImage(image, 0, 0);
+                imgData = hctx.getImageData(0, 0, image.width, image.height).data;
+
+                if(datasets.length === 0) addDataset();
+                resetView();
+                document.getElementById('controls').style.display = 'flex';
+                setState(STATES.IDLE);
+            };
+            img.src = URL.createObjectURL(file);
+        });
+
+        btnCalib.addEventListener('click', () => {
+            if (state === STATES.IDLE || state === STATES.PICKING || state === STATES.AUTO_TRACE) setState(STATES.CALIB_X1);
+            else setState(STATES.IDLE);
+        });
+
+        btnConfirmPt.addEventListener('click', () => {
+            if (!tempCalibPt) return;
+            if (state === STATES.CALIB_X1) { calib.x1 = tempCalibPt; tempCalibPt = null; setState(STATES.CALIB_X2); }
+            else if (state === STATES.CALIB_X2) { calib.x2 = tempCalibPt; tempCalibPt = null; setState(STATES.CALIB_Y1); }
+            else if (state === STATES.CALIB_Y1) { calib.y1 = tempCalibPt; tempCalibPt = null; setState(STATES.CALIB_Y2); }
+            else if (state === STATES.CALIB_Y2) { calib.y2 = tempCalibPt; tempCalibPt = null; setState(STATES.PICKING); }
+        });
+
+        // Right-click to delete point
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if ((state === STATES.PICKING || state === STATES.AUTO_TRACE_BOX || state === STATES.AUTO_TRACE_COLOR) && image) {
+                const rect = canvas.getBoundingClientRect();
+                const px = (e.clientX - rect.left - panX) / zoom;
+                const py = (e.clientY - rect.top - panY) / zoom;
+                const act = getActiveDs();
+                if (act && act.points.length > 0) {
+                    let minDist = Infinity, minIdx = -1;
+                    for (let i = 0; i < act.points.length; i++) {
+                        const d = Math.hypot(act.points[i].x - px, act.points[i].y - py);
+                        if (d < minDist) { minDist = d; minIdx = i; }
+                    }
+                    if (minDist < 15 / zoom) { // Tolerance in image pixels
+                        act.points.splice(minIdx, 1);
+                        renderDsList(); draw();
+                    }
+                }
+            }
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+                isDragging = true; dragStartX = e.clientX - panX; dragStartY = e.clientY - panY;
+                canvas.style.cursor = 'grabbing';
+            } else if (e.button === 0 && image && !e.shiftKey) {
+                const rect = canvas.getBoundingClientRect();
+                const px = (e.clientX - rect.left - panX) / zoom;
+                const py = (e.clientY - rect.top - panY) / zoom;
+                const p = {x: px, y: py};
+
+                if (state >= STATES.CALIB_X1 && state <= STATES.CALIB_Y2) {
+                    tempCalibPt = p;
+                    btnConfirmPt.style.display = 'inline-block';
+                    draw();
+                } else if (state === STATES.PICKING) {
+                    const lx = pixelToLogX(p.x, p.y);
+                    const ly = pixelToLogY(p.x, p.y);
+                    const act = getActiveDs();
+                    if(act) {
+                        act.points.push({ x: p.x, y: p.y, lx, ly });
+                        act.points.sort((a,b) => a.lx - b.lx);
+                        renderDsList(); draw();
+                    }
+                } else if (state === STATES.AUTO_TRACE_BOX) {
+                    traceBox = { startX: p.x, startY: p.y, x: p.x, y: p.y, w: 0, h: 0 };
+                    isDragging = true;
+                } else if (state === STATES.AUTO_TRACE_COLOR) {
+                    if (!imgData) return;
+                    const w = image.width;
+                    const tx = Math.round(p.x), ty = Math.round(p.y);
+                    if (tx>=0 && tx<w && ty>=0 && ty<image.height) {
+                        const idx = (ty * w + tx) * 4;
+                        traceColors.push({r: imgData[idx], g: imgData[idx+1], b: imgData[idx+2]});
+                        updateTraceColorsUI();
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            globalMouseX = e.clientX - rect.left;
+            globalMouseY = e.clientY - rect.top;
+
+            if (isDragging) {
+                if (state === STATES.AUTO_TRACE_BOX) {
+                    const px = (e.clientX - rect.left - panX) / zoom;
+                    const py = (e.clientY - rect.top - panY) / zoom;
+                    traceBox.x = Math.min(traceBox.startX, px);
+                    traceBox.y = Math.min(traceBox.startY, py);
+                    traceBox.w = Math.abs(px - traceBox.startX);
+                    traceBox.h = Math.abs(py - traceBox.startY);
+                } else {
+                    panX = e.clientX - dragStartX; panY = e.clientY - dragStartY; 
+                }
+            }
+            draw();
+        });
+        window.addEventListener('mouseup', () => { 
+            if (isDragging) { 
+                isDragging = false; 
+                canvas.style.cursor = 'crosshair'; 
+                if (state === STATES.AUTO_TRACE_BOX && traceBox && traceBox.w > 5 && traceBox.h > 5) {
+                    setState(STATES.AUTO_TRACE_COLOR);
+                } else if (state === STATES.AUTO_TRACE_BOX) {
+                    traceBox = null;
+                }
+            } 
+        });
+        window.addEventListener('mouseout', (e) => {
+            if (e.target === canvas) { globalMouseX = null; globalMouseY = null; draw(); }
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const zf = 1.1;
+            const newZoom = e.deltaY < 0 ? zoom * zf : zoom / zf;
+            panX = mouseX - (mouseX - panX) * (newZoom / zoom);
+            panY = mouseY - (mouseY - panY) * (newZoom / zoom);
+            zoom = newZoom; draw();
+        });
+
+        // Computer Vision Auto-Trace
+        function executeAutoTrace() {
+            const act = getActiveDs();
+            if(!act || !imgData || !traceBox || traceColors.length === 0) return;
+            
+            const tol = parseInt(tolSlider.value);
+            const w = image.width;
+            
+            // Determine scan bounds from traceBox
+            const minX = Math.max(0, Math.round(traceBox.x));
+            const maxX = Math.min(w - 1, Math.round(traceBox.x + traceBox.w));
+            const minY = Math.max(0, Math.round(traceBox.y));
+            const maxY = Math.min(image.height - 1, Math.round(traceBox.y + traceBox.h));
+            
+            let addedCount = 0;
+            let prevY = null; // Track line continuity
+            
+            for (let x = minX; x <= maxX; x++) {
+                let matchingY = [];
+                for (let y = minY; y <= maxY; y++) {
+                    const i = (y * w + x) * 4;
+                    const r = imgData[i], g = imgData[i+1], b = imgData[i+2];
+                    
+                    let isMatch = false;
+                    for (let tc of traceColors) {
+                        const dist = Math.sqrt((r-tc.r)**2 + (g-tc.g)**2 + (b-tc.b)**2);
+                        if (dist <= tol) { isMatch = true; break; }
+                    }
+                    
+                    if (isMatch) {
+                        matchingY.push(y);
+                    }
+                }
+                
+                if (matchingY.length > 0) {
+                    // Group matchingY into contiguous clusters
+                    matchingY.sort((a,b) => a-b);
+                    let clusters = [];
+                    let currentCluster = [matchingY[0]];
+                    for(let i=1; i<matchingY.length; i++) {
+                        if (matchingY[i] - matchingY[i-1] <= 5) { // 5 pixels gap allowed within same line
+                            currentCluster.push(matchingY[i]);
+                        } else {
+                            clusters.push(currentCluster);
+                            currentCluster = [matchingY[i]];
+                        }
+                    }
+                    clusters.push(currentCluster);
+                    
+                    // Filter out suspiciously thick clusters (likely background noise/gridlines)
+                    // A typical plot line is rarely thicker than 40px vertically.
+                    clusters = clusters.filter(c => c.length < 40);
+                    
+                    if (clusters.length > 0) {
+                        let bestCluster = null;
+                        
+                        if (prevY === null) {
+                            // First point: pick the thickest valid cluster
+                            clusters.sort((a,b) => b.length - a.length);
+                            bestCluster = clusters[0];
+                        } else {
+                            // Subsequent points: pick the cluster closest to the previous Y to maintain continuous trace
+                            let minDist = Infinity;
+                            for (let c of clusters) {
+                                let avg = c.reduce((a, b) => a + b, 0) / c.length;
+                                let dist = Math.abs(avg - prevY);
+                                if (dist < minDist) {
+                                    minDist = dist;
+                                    bestCluster = c;
+                                }
+                            }
+                        }
+                        
+                        if (bestCluster) {
+                            let avgY = bestCluster.reduce((a, b) => a + b, 0) / bestCluster.length;
+                            
+                            const lx = pixelToLogX(x, avgY);
+                            const ly = pixelToLogY(x, avgY);
+                            act.points.push({ x: x, y: avgY, lx, ly });
+                            addedCount++;
+                            prevY = avgY; // Update for next column
+                        }
+                    }
+                }
+            }
+            
+            act.points.sort((a,b) => a.lx - b.lx);
+            renderDsList(); draw();
+            setState(STATES.PICKING);
+            alert(`Auto-Trace extracted ${addedCount} points!`);
+        }
+
+        // Interpolation logic for export
+        function interpolateCurve(arr, targetX) {
+            if (arr.length === 0) return null;
+            if (arr.length === 1) return arr[0].ly;
+            if (targetX <= arr[0].lx) return arr[0].ly;
+            if (targetX >= arr[arr.length - 1].lx) return arr[arr.length - 1].ly;
+            
+            for (let i = 0; i < arr.length - 1; i++) {
+                if (targetX >= arr[i].lx && targetX <= arr[i + 1].lx) {
+                    const diff = arr[i + 1].lx - arr[i].lx;
+                    const t = diff === 0 ? 0 : (targetX - arr[i].lx) / diff;
+                    return arr[i].ly + t * (arr[i + 1].ly - arr[i].ly);
+                }
+            }
+            return null;
+        }
+
+        document.getElementById('btn-export').addEventListener('click', () => {
+            let totalPoints = datasets.reduce((sum, ds) => sum + ds.points.length, 0);
+            if (totalPoints === 0) return alert("Please pick some points first!");
+            
+            let xSet = new Set();
+            datasets.forEach(ds => ds.points.forEach(p => xSet.add(p.lx)));
+            let xArr = Array.from(xSet).sort((a, b) => a - b);
+            
+            const c = 299792458;
+            let formattedLines = [];
+            
+            for (let lx of xArr) {
+                let w_nm = lx;
+                switch(calib.xType) {
+                    case 'wavenumber_cm': w_nm = 1e7 / lx; break;
+                    case 'wavelength_cm': w_nm = lx * 1e7; break;
+                    case 'wavelength_um': w_nm = lx * 1000; break;
+                    case 'wavelength_m': w_nm = lx * 1e9; break;
+                    case 'freq_hz': w_nm = (c / lx) * 1e9; break;
+                    case 'freq_mhz': w_nm = (c / (lx * 1e6)) * 1e9; break;
+                    case 'freq_ghz': w_nm = (c / (lx * 1e9)) * 1e9; break;
+                    case 'freq_thz': w_nm = (c / (lx * 1e12)) * 1e9; break;
+                    case 'energy_mev': w_nm = 1239841.93 / lx; break;
+                    case 'energy_ev': w_nm = 1239.84193 / lx; break;
+                    case 'energy_mev_mega': w_nm = 1.23984193 / lx; break;
+                }
+                
+                let n_val = 1.0, k_val = 0.0;
+                for (let ds of datasets) {
+                    if (ds.points.length === 0) continue;
+                    // Ensure points are sorted by lx before interpolation
+                    ds.points.sort((a, b) => a.lx - b.lx);
+                    let val = interpolateCurve(ds.points, lx);
+                    if (val === null) continue;
+                    if (ds.type === 'n') n_val = val;
+                    else if (ds.type === 'k') k_val = val;
+                    else if (ds.type === 'eps_r') n_val = val;
+                    else if (ds.type === 'eps_i') k_val = val; 
+                }
+                formattedLines.push(`${w_nm.toFixed(3)}\t${n_val.toPrecision(5)}\t${k_val.toPrecision(5)}`);
+            }
+            
+            let outputPairs = formattedLines.map(line => {
+                let parts = line.split('\t');
+                return { w: parseFloat(parts[0]), line: line };
+            });
+            outputPairs.sort((a,b) => a.w - b.w);
+            const dataStr = outputPairs.map(o => o.line).join('\n');
+            
+            if (window.opener) {
+                window.opener.postMessage({ type: 'DIGITIZER_DATA', data: dataStr }, '*');
+                window.close();
+            } else { alert("This window was not opened from the main app. Data cannot be exported directly."); }
+        });
+
+        function setState(s) {
+            state = s;
+            overlay.style.display = 'block';
+            btnConfirmPt.style.display = 'none';
+            btnAutoTrace.textContent = "Activate";
+            btnAutoTrace.style.background = "rgba(250, 204, 21, 0.2)";
+            
+            switch(s) {
+                case STATES.IDLE:
+                    statusEl.innerHTML = `Set bounds and click Calibrate Axes.`;
+                    btnCalib.textContent = "Calibrate Axes";
+                    overlay.style.display = 'none';
+                    break;
+                case STATES.CALIB_X1:
+                    statusEl.innerHTML = `<span style="color:#a78bfa">Step 1/4:</span> Click X-axis at <br/><b>Min Value (${document.getElementById('vx1').value})</b>`;
+                    btnCalib.textContent = "Cancel";
+                    overlayText.innerHTML = `Click X-axis at Min Value. Drag to adjust.`;
+                    calib.x1 = calib.x2 = calib.y1 = calib.y2 = tempCalibPt = null;
+                    break;
+                case STATES.CALIB_X2:
+                    statusEl.innerHTML = `<span style="color:#a78bfa">Step 2/4:</span> Click X-axis at <br/><b>Max Value (${document.getElementById('vx2').value})</b>`;
+                    overlayText.innerHTML = `Click X-axis at Max Value.`;
+                    break;
+                case STATES.CALIB_Y1:
+                    statusEl.innerHTML = `<span style="color:#34d399">Step 3/4:</span> Click Y-axis at <br/><b>Min Value (${document.getElementById('vy1').value})</b>`;
+                    overlayText.innerHTML = `Click Y-axis at Min Value.`;
+                    break;
+                case STATES.CALIB_Y2:
+                    statusEl.innerHTML = `<span style="color:#34d399">Step 4/4:</span> Click Y-axis at <br/><b>Max Value (${document.getElementById('vy2').value})</b>`;
+                    overlayText.innerHTML = `Click Y-axis at Max Value.`;
+                    break;
+                case STATES.PICKING:
+                    statusEl.innerHTML = `<span style="color:#10b981">Calibration Complete!</span><br/>Click points on the active curve.`;
+                    btnCalib.textContent = "Recalibrate Axes";
+                    overlay.style.display = 'none';
+                    document.getElementById('trace-colors-container').style.display = 'none';
+                    readInputs();
+                    break;
+                case STATES.AUTO_TRACE_BOX:
+                    statusEl.innerHTML = `<span style="color:#facc15">Auto-Trace: Step 1/2</span><br/>Drag a bounding box over the curve.`;
+                    overlay.style.display = 'block';
+                    overlayText.innerHTML = `Click and drag to draw a box around the segment you want to extract.`;
+                    btnAutoTrace.textContent = "Cancel Trace";
+                    btnAutoTrace.style.background = "rgba(239, 68, 68, 0.3)";
+                    traceBox = null; traceColors = [];
+                    document.getElementById('trace-colors-container').style.display = 'none';
+                    break;
+                case STATES.AUTO_TRACE_COLOR:
+                    statusEl.innerHTML = `<span style="color:#facc15">Auto-Trace: Step 2/2</span><br/>Click inside box to sample curve colors.`;
+                    overlay.style.display = 'none';
+                    btnAutoTrace.textContent = "Cancel Trace";
+                    btnAutoTrace.style.background = "rgba(239, 68, 68, 0.3)";
+                    document.getElementById('trace-colors-container').style.display = 'flex';
+                    updateTraceColorsUI();
+                    break;
+            }
+            draw();
+        }
+
+        function readInputs() {
+            calib.vx1 = parseFloat(document.getElementById('vx1').value);
+            calib.vx2 = parseFloat(document.getElementById('vx2').value);
+            calib.vy1 = parseFloat(document.getElementById('vy1').value);
+            calib.vy2 = parseFloat(document.getElementById('vy2').value);
+            calib.xLog = document.getElementById('x-log').checked;
+            calib.yLog = document.getElementById('y-log').checked;
+            calib.xType = document.getElementById('x-type').value;
+        }
+
+        function pixelToLogX(px, py) {
+            const p0 = calib.x1, p1 = calib.x2;
+            const vx = p1.x - p0.x, vy = p1.y - p0.y;
+            const magSq = vx*vx + vy*vy;
+            const fraction = magSq === 0 ? 0 : ((px - p0.x)*vx + (py - p0.y)*vy) / magSq;
+            if (calib.xLog) return Math.pow(10, Math.log10(calib.vx1) + fraction * (Math.log10(calib.vx2) - Math.log10(calib.vx1)));
+            return calib.vx1 + fraction * (calib.vx2 - calib.vx1);
+        }
+
+        function pixelToLogY(px, py) {
+            const p0 = calib.y1, p1 = calib.y2;
+            const vx = p1.x - p0.x, vy = p1.y - p0.y;
+            const magSq = vx*vx + vy*vy;
+            const fraction = magSq === 0 ? 0 : ((px - p0.x)*vx + (py - p0.y)*vy) / magSq;
+            if (calib.yLog) return Math.pow(10, Math.log10(calib.vy1) + fraction * (Math.log10(calib.vy2) - Math.log10(calib.vy1)));
+            return calib.vy1 + fraction * (calib.vy2 - calib.vy1);
+        }
+
+        function resetView() {
+            if(!image) return;
+            const p = canvas.parentElement;
+            canvas.width = p.clientWidth; canvas.height = p.clientHeight;
+            const scale = Math.min(canvas.width / image.width, canvas.height / image.height) * 0.9;
+            zoom = scale; panX = (canvas.width - image.width * zoom) / 2; panY = (canvas.height - image.height * zoom) / 2; draw();
+        }
+
+        function draw() {
+            if (!ctx || !image) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save(); ctx.translate(panX, panY); ctx.scale(zoom, zoom);
+            
+            ctx.globalAlpha = 0.8; ctx.drawImage(image, 0, 0); ctx.globalAlpha = 1.0;
+            
+            const drawCross = (p, c, l) => {
+                if(!p) return;
+                ctx.strokeStyle = c; ctx.lineWidth = 2/zoom; ctx.beginPath();
+                const s = 10/zoom;
+                ctx.moveTo(p.x - s, p.y); ctx.lineTo(p.x + s, p.y);
+                ctx.moveTo(p.x, p.y - s); ctx.lineTo(p.x, p.y + s); ctx.stroke();
+                ctx.fillStyle = c; ctx.font = `bold ${16/zoom}px sans-serif`; 
+                // Draw shadow for text readability
+                ctx.shadowColor="black"; ctx.shadowBlur=4;
+                ctx.fillText(l, p.x + s, p.y - s);
+                ctx.shadowBlur=0;
+            };
+
+            drawCross(calib.x1, '#a78bfa', 'X1'); drawCross(calib.x2, '#a78bfa', 'X2');
+            drawCross(calib.y1, '#34d399', 'Y1'); drawCross(calib.y2, '#34d399', 'Y2');
+            if (tempCalibPt) drawCross(tempCalibPt, '#facc15', 'SET');
+            
+            if (calib.x1 && calib.x2) {
+                ctx.strokeStyle = 'rgba(167, 139, 250, 0.5)'; ctx.lineWidth = 1/zoom;
+                ctx.beginPath(); ctx.moveTo(calib.x1.x, calib.x1.y); ctx.lineTo(calib.x2.x, calib.x2.y); ctx.stroke();
+            }
+            if (calib.y1 && calib.y2) {
+                ctx.strokeStyle = 'rgba(52, 211, 153, 0.5)'; ctx.lineWidth = 1/zoom;
+                ctx.beginPath(); ctx.moveTo(calib.y1.x, calib.y1.y); ctx.lineTo(calib.y2.x, calib.y2.y); ctx.stroke();
+            }
+
+            if (globalMouseX !== null && globalMouseY !== null && !isDragging) {
+                const cmx = (globalMouseX - panX) / zoom;
+                const cmy = (globalMouseY - panY) / zoom;
+
+                if (state === STATES.CALIB_X2 && calib.x1) {
+                    ctx.strokeStyle = 'rgba(167, 139, 250, 0.8)'; ctx.lineWidth = 1/zoom; ctx.setLineDash([5/zoom, 5/zoom]);
+                    ctx.beginPath(); ctx.moveTo(calib.x1.x, calib.x1.y); ctx.lineTo(cmx, cmy); ctx.stroke(); ctx.setLineDash([]);
+                }
+                if (state === STATES.CALIB_Y2 && calib.y1) {
+                    ctx.strokeStyle = 'rgba(52, 211, 153, 0.8)'; ctx.lineWidth = 1/zoom; ctx.setLineDash([5/zoom, 5/zoom]);
+                    ctx.beginPath(); ctx.moveTo(calib.y1.x, calib.y1.y); ctx.lineTo(cmx, cmy); ctx.stroke(); ctx.setLineDash([]);
+                }
+                
+                // Draw crosshair for the cursor
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1/zoom;
+                ctx.beginPath();
+                ctx.moveTo(cmx, 0); ctx.lineTo(cmx, image.height);
+                ctx.moveTo(0, cmy); ctx.lineTo(image.width, cmy);
+                ctx.stroke();
+            }
+
+            for (let ds of datasets) {
+                ctx.fillStyle = ds.color;
+                for (let pt of ds.points) {
+                    ctx.beginPath(); ctx.arc(pt.x, pt.y, 4/zoom, 0, 2*Math.PI); ctx.fill();
+                }
+                if (ds.points.length > 1) {
+                    ctx.strokeStyle = ds.color; ctx.lineWidth = 1.5/zoom;
+                    ctx.beginPath(); ctx.moveTo(ds.points[0].x, ds.points[0].y);
+                    for(let i=1; i<ds.points.length; i++) ctx.lineTo(ds.points[i].x, ds.points[i].y);
+                    ctx.stroke();
+                }
+            }
+            if (traceBox) {
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 1.5/zoom;
+                ctx.setLineDash([5/zoom, 5/zoom]);
+                ctx.strokeRect(traceBox.x, traceBox.y, traceBox.w, traceBox.h);
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(250, 204, 21, 0.1)';
+                ctx.fillRect(traceBox.x, traceBox.y, traceBox.w, traceBox.h);
+            }
+
+            ctx.restore();
+
+            // Draw Magnifier
+            if (globalMouseX !== null && globalMouseY !== null && image && !isDragging) {
+                if ((state >= STATES.CALIB_X1 && state <= STATES.PICKING) || state === STATES.AUTO_TRACE_COLOR) {
+                    const magSize = 120;
+                    const magZoom = 4;
+                    let mx = globalMouseX;
+                    let my = globalMouseY;
+                    
+                    let magX = mx + 20;
+                    let magY = my - magSize - 20;
+                    if (magY < 0) magY = my + 20;
+                    if (magX + magSize > canvas.width) magX = mx - magSize - 20;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(magX + magSize/2, magY + magSize/2, magSize/2, 0, Math.PI*2);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#a78bfa';
+                    ctx.fillStyle = '#000';
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.clip();
+
+                    const srcX = (mx - panX) / zoom;
+                    const srcY = (my - panY) / zoom;
+                    const srcW = magSize / magZoom;
+                    const srcH = magSize / magZoom;
+                    
+                    ctx.drawImage(image, srcX - srcW/2, srcY - srcH/2, srcW, srcH, magX, magY, magSize, magSize);
+                    
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(magX + magSize/2, magY);
+                    ctx.lineTo(magX + magSize/2, magY + magSize);
+                    ctx.moveTo(magX, magY + magSize/2);
+                    ctx.lineTo(magX + magSize, magY + magSize/2);
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
+            }
+        }
+
+        window.addEventListener('resize', () => { if(image) { const oZ = zoom; resetView(); zoom = oZ; draw(); }});
+    </script>
+</body>
+</html>

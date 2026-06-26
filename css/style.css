@@ -1,0 +1,613 @@
+/* --- Base Variables (Premium Dark Theme by default) --- */
+:root {
+    --bg-main: #121212;      /* Modern Dark Gray (main) */
+    --bg-sidebar: #181818;   /* Slightly lighter for sidebar */
+    --bg-card: #202020;      /* Card background */
+    --bg-card-hover: #2c2c2c; /* Card hover state */
+    
+    --text-main: #F9FAFB;    /* Gray 50 */
+    --text-muted: #A1A1AA;   /* Zinc 400 */
+    
+    --accent-blue: #3b82f6;  /* Vibrant Blue */
+    --accent-hover: #2563eb; /* Blue 600 */
+    --accent-green: #10B981; /* Emerald 500 */
+    
+    --border-color: #333333; /* Dark gray border */
+    
+    --config-bar-bg: rgba(15, 23, 42, 0.6);
+    --config-bar-border: rgba(255, 255, 255, 0.05);
+    
+    --pill-bg: rgba(255, 255, 255, 0.05);
+    --pill-border: rgba(255, 255, 255, 0.1);
+    --pill-hover-bg: rgba(255, 255, 255, 0.08);
+    --pill-hover-border: rgba(255, 255, 255, 0.2);
+
+    /* Semantic Colors */
+    --color-danger: #ef4444;   /* Red for deletes/errors */
+    --color-warning: #f59e0b;  /* Orange/Yellow for warnings/steps */
+    --color-warning-alt: #fbbf24; /* Amber */
+    --color-success: #10b981;  /* Green for success */
+    --color-purple: #9333ea;   /* Purple for opt/sweep */
+    --color-purple-alt: #a855f7; /* Lighter purple */
+    --color-light-blue: #38bdf8;
+    
+    /* Geometry Layer Colors */
+    --layer-air: #e0f2fe;
+    --layer-h2o: #bae6fd;
+    --layer-glass: #94a3b8;
+    --layer-sio2: #38bdf8;
+    --layer-tio2: #c084fc;
+    --layer-gold: #fbbf24;
+    --layer-silver: #cbd5e1;
+    --layer-default: #64748b;
+    
+    --font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    
+    /* Plotly specifics */
+    --plot-bg: #050505;
+    --plot-paper: #050505;
+    --plot-grid: #374151;
+    --plot-text: #9CA3AF;
+}
+
+/* --- Light Theme --- */
+[data-theme="light"] {
+    --bg-main: #F3F4F6;      /* Gray 100 */
+    --bg-sidebar: #FFFFFF;   /* White */
+    --bg-card: #FFFFFF;      /* White */
+    --bg-card-hover: #E5E7EB; /* Gray 200 */
+    
+    --text-main: #111827;    /* Gray 900 */
+    --text-muted: #4B5563;   /* Gray 600 */
+    
+    --accent-blue: #4F46E5;  /* Indigo 600 */
+    --accent-hover: #4338CA; /* Indigo 700 */
+    --accent-green: #059669; /* Emerald 600 */
+    
+    --border-color: #D1D5DB; /* Gray 300 */
+    
+    --config-bar-bg: rgba(255, 255, 255, 0.85);
+    --config-bar-border: rgba(0, 0, 0, 0.1);
+    
+    --pill-bg: rgba(0, 0, 0, 0.05);
+    --pill-border: rgba(0, 0, 0, 0.1);
+    --pill-hover-bg: rgba(0, 0, 0, 0.08);
+    --pill-hover-border: rgba(0, 0, 0, 0.2);
+    
+    /* Semantic Colors */
+    --color-danger: #dc2626;   /* Red */
+    --color-warning: #ea580c;  /* Orange for warnings/steps */
+    --color-warning-alt: #d97706; /* Amber */
+    --color-success: #059669;  /* Green */
+    --color-purple: #7e22ce;   /* Purple */
+    --color-purple-alt: #9333ea; 
+    --color-light-blue: #0284c7;
+    
+    /* Geometry Layer Colors */
+    --layer-air: #bae6fd;
+    --layer-h2o: #7dd3fc;
+    --layer-glass: #cbd5e1;
+    --layer-sio2: #38bdf8;
+    --layer-tio2: #c084fc;
+    --layer-gold: #fbbf24;
+    --layer-silver: #94a3b8;
+    --layer-default: #64748b;
+
+    /* Plotly specifics */
+    --plot-bg: #F3F4F6;
+    --plot-paper: #F3F4F6;
+    --plot-grid: #D1D5DB;
+    --plot-text: #4B5563;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased; 
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- Layout --- */
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+.sidebar {
+    width: 260px;
+    background-color: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1); 
+    z-index: 100;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.sidebar-header {
+    padding: 24px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(180deg, rgba(14, 165, 233, 0.05) 0%, transparent 100%);
+}
+
+.sidebar-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-blue);
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+}
+
+.sidebar-header p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.nav-links {
+    list-style: none;
+    padding: 20px 0;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.nav-links li {
+    padding: 14px 24px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-left: 3px solid transparent; 
+}
+
+.nav-links li i {
+    width: 20px;
+    text-align: center;
+    font-size: 1.1rem;
+}
+
+.nav-links li:hover {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+}
+
+.nav-links li.active {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    border-left: 3px solid var(--accent-blue);
+    font-weight: 600;
+}
+
+.nav-links li.active i {
+    color: var(--accent-blue);
+}
+
+.sidebar-footer {
+    padding: 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 0.3s ease;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background-color: rgba(0,0,0,0.2);
+}
+
+/* --- Main Content Area --- */
+.main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: var(--bg-main);
+    position: relative;
+    min-width: 0; 
+}
+
+/* --- Global Configuration Bar --- */
+.global-config-bar {
+    background: var(--config-bar-bg);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--config-bar-border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 50; 
+    flex-shrink: 0;
+}
+
+.config-label {
+    font-size: 0.85rem;
+    color: var(--accent-blue);
+    font-weight: 600;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+}
+
+.config-stack {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px; 
+}
+
+.config-stack::-webkit-scrollbar { height: 4px; }
+.config-stack::-webkit-scrollbar-track { background: transparent; }
+.config-stack::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.config-stack::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+.layer-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--pill-bg);
+    border: 1px solid var(--pill-border);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-main);
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+}
+
+.layer-pill:hover {
+    transform: translateY(-1px);
+    background: var(--pill-hover-bg);
+    border-color: var(--pill-hover-border);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.layer-pill.incident { 
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(14, 165, 233, 0.02));
+    border-color: rgba(14, 165, 233, 0.3);
+}
+
+.layer-pill.substrate { 
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.02));
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.layer-color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 8px rgba(0,0,0,0.4);
+}
+
+.layer-arrow {
+    color: rgba(255,255,255,0.2);
+    font-size: 0.75rem;
+    margin: 0 2px;
+}
+
+/* --- Tabs --- */
+.tab-pane {
+    display: none; 
+    padding: 24px 40px;
+    flex-grow: 1;
+    overflow-y: auto;
+    height: 100%;
+    min-width: 0;
+    width: 100%;
+}
+
+.tab-pane.active {
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.tab-header {
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+    flex-shrink: 0;
+}
+
+.tab-header h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text-main);
+    letter-spacing: -0.5px;
+}
+
+.tab-header p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.tab-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%; 
+    min-height: 0;
+    min-width: 0; 
+    width: 100%;
+    position: relative;
+}
+
+/* --- Container Universal Plotly (Bulletproof Layout 4.0) --- */
+/* Am eliminat selecția globală agresivă care strica panoul de setări! */
+
+.plotly-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    flex: 1 1 0%; /* Secretul pentru a nu strivi meniul lateral: flex-basis 0% */
+    min-width: 0;
+    min-height: 400px;
+    max-height: calc(100vh - 220px); /* O limită superioară ca să nu fie un grafic uriaș */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; 
+    border-radius: 12px; 
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-main);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.js-plotly-plot, .js-plotly-plot .plot-container {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+}
+
+/* --- Placeholder UI --- */
+.placeholder-card {
+    background-color: var(--bg-card);
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.placeholder-card i {
+    margin-bottom: 16px;
+    color: var(--accent-blue);
+    opacity: 0.8;
+}
+
+.placeholder-card h3 {
+    margin-bottom: 8px;
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-main); border-left: 1px solid var(--border-color); }
+::-webkit-scrollbar-thumb { background: var(--bg-card-hover); border-radius: 5px; border: 2px solid var(--bg-main); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* --- Accordion (Tutorial) --- */
+.accordion-item {
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.accordion-header {
+    width: 100%;
+    padding: 15px;
+    background: var(--bg-card);
+    border: none;
+    text-align: left;
+    color: var(--text-main);
+    font-size: 1.05rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease, color 0.3s ease;
+}
+
+.accordion-header:hover {
+    background: var(--bg-card-hover);
+}
+
+.accordion-content {
+    max-height: 0;
+    padding: 0 15px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.accordion-item.active .accordion-content {
+    max-height: 500px;
+    padding: 15px;
+}
+
+.accordion-item.active .accordion-header .chevron {
+    transform: rotate(180deg);
+}
+
+.accordion-header .chevron {
+    transition: transform 0.3s ease;
+}
+
+/* --- Input Override Rules --- */
+input, select, textarea {
+    color: var(--text-main) !important;
+}
+
+/* Force dark text on Light Theme for secondary buttons */
+button[style*="var(--bg-main)"], button[style*="var(--bg-card)"] {
+    color: var(--text-main) !important;
+}
+
+/* Specific styling for badges in Tutorial */
+.tutorial-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: white;
+    margin: 0 4px;
+}
+.badge-blue { background: var(--accent-blue); }
+.badge-green { background: var(--color-success); }
+.badge-amber { background: var(--color-warning); }
+.badge-purple { background: var(--color-purple); }
+
+.tutorial-step-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+.tutorial-step-num {
+    color: white;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+.tutorial-step-content {
+    flex: 1;
+}
+.tutorial-step-title {
+    color: var(--text-main);
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 1.05rem;
+}
+
+/* --- Utility Semantic Classes --- */
+.text-danger { color: var(--color-danger) !important; }
+.text-warning { color: var(--color-warning) !important; }
+.text-warning-alt { color: var(--color-warning-alt) !important; }
+.text-success { color: var(--color-success) !important; }
+.text-purple { color: var(--color-purple) !important; }
+.text-purple-alt { color: var(--color-purple-alt) !important; }
+.text-light-blue { color: var(--color-light-blue) !important; }
+
+.bg-danger { background-color: var(--color-danger) !important; }
+.bg-warning { background-color: var(--color-warning) !important; }
+.bg-warning-alt { background-color: var(--color-warning-alt) !important; }
+.bg-success { background-color: var(--color-success) !important; }
+.bg-purple { background-color: var(--color-purple) !important; }
+.bg-purple-alt { background-color: var(--color-purple-alt) !important; }
+.bg-light-blue { background-color: var(--color-light-blue) !important; }
+
+.border-danger { border-color: var(--color-danger) !important; }
+.border-warning { border-color: var(--color-warning) !important; }
+.border-success { border-color: var(--color-success) !important; }
+.border-purple { border-color: var(--color-purple) !important; }
+
+/* --- Custom Tooltips --- */
+.custom-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--border-color);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: bold;
+    cursor: help;
+    margin-left: 6px;
+    vertical-align: middle;
+    transition: all 0.2s ease;
+}
+
+.custom-tooltip:hover {
+    background: var(--accent-blue);
+    color: white;
+}
+
+/* --- Global Tooltip (JS controlled to avoid overflow issues) --- */
+.global-tooltip-box {
+    position: fixed;
+    background: var(--bg-card);
+    color: var(--text-main);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: normal;
+    white-space: pre-wrap;
+    width: max-content;
+    max-width: 250px;
+    text-align: left;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    border: 1px solid var(--border-color);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 999999;
+    pointer-events: none;
+}
+.global-tooltip-box.show {
+    opacity: 1;
+    visibility: visible;
+}
+.global-tooltip-box::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px 6px 0 6px;
+    border-style: solid;
+    border-color: var(--border-color) transparent transparent transparent;
+}
+.global-tooltip-box.bottom-arrow::after {
+    bottom: auto;
+    top: -6px;
+    border-width: 0 6px 6px 6px;
+    border-color: transparent transparent var(--border-color) transparent;
+}

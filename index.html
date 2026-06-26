@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPR Companion</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="SPR-companion-logo.svg">
+    <link rel="icon" type="image/png" href="SPR-companion-logo.png">
+    <!-- External Libraries (CDNs) -->
+    <!-- Plotly for advanced 2D/3D charts and SVG exports -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- Math.js for complex numbers and 4x4 matrix operations (Anisotropic TMM / RCWA) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
+    <!-- FontAwesome for UI Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css?v=34">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header" style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <!-- Custom SVG Logo Placeholder -->
+                    <div id="custom-logo-container" style="width: 32px; height: 32px; flex-shrink: 0;">
+                        <img src="SPR-companion-logo.svg" alt="SPR Companion Logo" style="width: 100%; height: 100%; object-fit: contain;">
+                    </div>
+                    <h1 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin: 0;">SPR Companion</h1>
+                </div>
+                <div style="display: flex; gap: 5px; width: 100%; margin-top: 15px;">
+                    <button id="btn-save-workspace" style="flex: 1; background: var(--bg-main); color: var(--accent-blue); border: 1px solid var(--border-color); padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s;" title="Export Configuration (Geometry & Materials)"><i class="fa-solid fa-file-export"></i> Export</button>
+                    <button id="btn-load-workspace" style="flex: 1; background: var(--bg-main); color: var(--accent-green); border: 1px solid var(--border-color); padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s;" title="Import Configuration (Geometry & Materials)"><i class="fa-solid fa-file-import"></i> Import</button>
+                    <input type="file" id="input-load-workspace" style="display: none;" accept=".json">
+                </div>
+            </div>
+            
+            <ul class="nav-links" id="navLinks">
+                <li data-target="tab-home" class="active">
+                    Home
+                </li>
+                <li data-target="tab-materials">
+                    Database & Materials
+                </li>
+                <li data-target="tab-geometry">
+                    Geometry Design
+                </li>
+                <li data-target="tab-simulation">
+                    Setup & Simulation
+                </li>
+                <li data-target="tab-sweep">
+                    Parameter Sweep
+                </li>
+                <li data-target="tab-optimization">
+                    Optimization
+                </li>
+            </ul>
+
+            <div class="sidebar-footer" style="flex-direction: column; align-items: stretch; gap: 10px;">
+                <p id="status-indicator" style="display: none;">Engine Ready</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 5px;">
+                    <span id="theme-label" style="font-size: 0.8rem; font-weight: bold; color: var(--text-muted);">Theme: Dark</span>
+                    <button id="btn-theme-toggle" style="background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        Switch
+                    </button>
+                </div>
+                <div style="text-align: center; margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Pericle Varasteanu - Nanobiotechnology Lab - IMT Bucharest</span>
+                    <div style="display: flex; justify-content: center; gap: 12px; font-size: 0.95rem;">
+                        <a href="https://www.linkedin.com/in/pericle-varasteanu-73b84b211/" target="_blank" style="color: var(--text-muted); text-decoration: none;"><i class="fa-brands fa-linkedin"></i></a>
+                        <a href="https://www.instagram.com/pericle_v/" target="_blank" style="color: var(--text-muted); text-decoration: none;"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="https://www.facebook.com/pericle.varasteanu/" target="_blank" style="color: var(--text-muted); text-decoration: none;"><i class="fa-brands fa-facebook"></i></a>
+                        <a href="https://www.imt.ro/organisation/research%20labs/L1/index.htm" target="_blank" style="color: var(--text-muted); text-decoration: none;"><i class="fa-solid fa-atom"></i></a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- NEW: Global Configuration Bar -->
+            <div id="global-config-bar" class="global-config-bar">
+                <div class="config-label">Structure:</div>
+                <div id="global-config-stack" class="config-stack">
+                    <!-- Injected by JS (app.js) -->
+                </div>
+            </div>
+
+            <!-- TAB 0: Home -->
+            <section id="tab-home" class="tab-pane active">
+                <div class="tab-body" style="padding: 40px; overflow-y: auto; height: 100%;">
+                    
+                    <div style="max-width: 900px; margin: 0 auto;">
+                        <div style="text-align: center; margin-bottom: 50px;">
+                            <img src="SPR-companion-logo.svg" alt="SPR Companion Logo" style="width: 80px; height: 80px; object-fit: contain; margin-bottom: 20px;">
+                            <h2 style="font-size: 2.5rem; color: var(--text-main); font-weight: 700; letter-spacing: -0.5px;">Welcome to SPR Companion</h2>
+                            <p style="color: var(--text-muted); font-size: 1.15rem; max-width: 600px; margin: 15px auto 0; line-height: 1.6;">
+                                Your complete workflow for simulating, analyzing, and optimizing planar multilayer structures and Surface Plasmon Resonance (SPR) based sensors.
+                            </p>
+                        </div>
+
+                        <!-- Step 1: Materials -->
+                        <div class="tutorial-step-row" style="align-items: center; border-left: 4px solid var(--border-color);">
+                            <div class="tutorial-step-content" style="padding-left: 10px;">
+                                <div class="tutorial-step-title" style="font-size: 1.25rem;"><a href="#" onclick="document.querySelector('[data-target=\'tab-materials\']').click(); return false;" style="color: var(--text-main); text-decoration: underline; text-decoration-color: var(--border-color); text-underline-offset: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-blue)'" onmouseout="this.style.color='var(--text-main)'"><i class="fa-solid fa-flask" style="margin-right: 8px; color: var(--text-muted);"></i>Database & Materials</a></div>
+                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Define the exact optical properties for the layers in your stack.</p>
+                                <ul style="color: var(--text-main); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
+                                    <li><strong>Material Types:</strong> Standard bulk media, 2D materials, and porous effective mediums.</li>
+                                    <li><strong>Data Import:</strong> Constant index (n, k), Tabulated dispersive data (CSV), Analytic models (Drude, Sellmeier), or directly digitize data from literature plots using the built-in Digitizer.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Geometry -->
+                        <div class="tutorial-step-row" style="align-items: center; border-left: 4px solid var(--border-color);">
+                            <div class="tutorial-step-content" style="padding-left: 10px;">
+                                <div class="tutorial-step-title" style="font-size: 1.25rem;"><a href="#" onclick="document.querySelector('[data-target=\'tab-geometry\']').click(); return false;" style="color: var(--text-main); text-decoration: underline; text-decoration-color: var(--border-color); text-underline-offset: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-green)'" onmouseout="this.style.color='var(--text-main)'"><i class="fa-solid fa-layer-group" style="margin-right: 8px; color: var(--text-muted);"></i>Geometry Design</a></div>
+                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Construct the physical multilayer stack from your defined materials.</p>
+                                <ul style="color: var(--text-main); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
+                                    <li><strong>Customization:</strong> Build arbitrary layer sequences, from simple Kretschmann configurations to complex Distributed Bragg Reflectors (DBRs).</li>
+                                    <li><strong>Export & Import:</strong> Save your entire geometry configuration as a workspace file to easily load and share your designs later.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Simulation -->
+                        <div class="tutorial-step-row" style="align-items: center; border-left: 4px solid var(--border-color);">
+                            <div class="tutorial-step-content" style="padding-left: 10px;">
+                                <div class="tutorial-step-title" style="font-size: 1.25rem;"><a href="#" onclick="document.querySelector('[data-target=\'tab-simulation\']').click(); return false;" style="color: var(--text-main); text-decoration: underline; text-decoration-color: var(--border-color); text-underline-offset: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--color-warning)'" onmouseout="this.style.color='var(--text-main)'"><i class="fa-solid fa-chart-line" style="margin-right: 8px; color: var(--text-muted);"></i>Setup & Simulation</a></div>
+                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Run fast, analytical Transfer Matrix Method (TMM) calculations.</p>
+                                <ul style="color: var(--text-main); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
+                                    <li><strong>Interrogation Modes:</strong> Perform both Angular (fixed wavelength) and Spectral (fixed angle) interrogations.</li>
+                                    <li><strong>Analysis:</strong> Automatic curve fitting to identify resonance dips and extraction of critical performance parameters (Sensitivity, FWHM, Figure of Merit).</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Sweep -->
+                        <div class="tutorial-step-row" style="align-items: center; border-left: 4px solid var(--border-color);">
+                            <div class="tutorial-step-content" style="padding-left: 10px;">
+                                <div class="tutorial-step-title" style="font-size: 1.25rem;"><a href="#" onclick="document.querySelector('[data-target=\'tab-sweep\']').click(); return false;" style="color: var(--text-main); text-decoration: underline; text-decoration-color: var(--border-color); text-underline-offset: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--color-purple)'" onmouseout="this.style.color='var(--text-main)'"><i class="fa-solid fa-sliders" style="margin-right: 8px; color: var(--text-muted);"></i>Parameter Sweep</a></div>
+                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Visualize how structural variations affect the optical response.</p>
+                                <ul style="color: var(--text-main); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
+                                    <li>Vary any geometric or material parameter systematically to observe trends.</li>
+                                    <li>Generate high-resolution 2D heatmaps and trace dispersion curves to locate optimal coupling regimes.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Step 5: Optimization -->
+                        <div class="tutorial-step-row" style="align-items: center; margin-bottom: 40px; border-left: 4px solid var(--border-color);">
+                            <div class="tutorial-step-content" style="padding-left: 10px;">
+                                <div class="tutorial-step-title" style="font-size: 1.25rem;"><a href="#" onclick="document.querySelector('[data-target=\'tab-optimization\']').click(); return false;" style="color: var(--text-main); text-decoration: underline; text-decoration-color: var(--border-color); text-underline-offset: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--color-danger)'" onmouseout="this.style.color='var(--text-main)'"><i class="fa-solid fa-wand-magic-sparkles" style="margin-right: 8px; color: var(--text-muted);"></i>Optimization</a></div>
+                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Optimize your structure to achieve the desired optical performance.</p>
+                                <ul style="color: var(--text-main); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
+                                    <li><strong>Algorithms:</strong> Single-Objective GA (SOGA), Multi-Objective NSGA-II, Particle Swarm Optimization (PSO), and Gradient Descent with ADAM.</li>
+                                    <li><strong>Flexibility:</strong> Define multiple objectives concurrently, apply strict constraints, combine performance metrics, or fit the structure to a target optical curve.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <button onclick="document.querySelector('[data-target=\'tab-materials\']').click();" style="background: var(--accent-blue); color: white; border: none; padding: 10px 24px; font-size: 0.95rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background 0.2s;">
+                                Start Setup <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+
+
+            <!-- TAB 1: Database & Materials -->
+            <section id="tab-materials" class="tab-pane">
+                <header class="tab-header">
+                    <h1>Database & Materials</h1>
+                    <p>Define the exact optical properties for the layers in your stack.</p>
+                </header>
+                <div class="tab-body" id="materials-container">
+                    <!-- Dynamic content injected by tab1Materials.js -->
+                    <div class="placeholder-card">
+                        <h3>Materials Module</h3>
+                        <p>UI for adding n, k and 3x3 tensors will load here.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: Geometry Design -->
+            <section id="tab-geometry" class="tab-pane">
+                <header class="tab-header">
+                    <h1>Geometry Design</h1>
+                    <p>Construct the physical multilayer stack from your defined materials.</p>
+                </header>
+                <div class="tab-body" id="geometry-container">
+                    <!-- Dynamic content injected by tab2Geometry.js -->
+                </div>
+            </section>
+
+            <!-- TAB 3: Setup & Simulation -->
+            <section id="tab-simulation" class="tab-pane">
+                <header class="tab-header">
+                    <h1>Setup & Simulation</h1>
+                    <p>Run fast, analytical Transfer Matrix Method (TMM) calculations.</p>
+                </header>
+                <div class="tab-body" id="simulation-container">
+                    <!-- Dynamic content injected by tab3Simulation.js -->
+                </div>
+            </section>
+
+            <!-- TAB 4: Parameter Sweep -->
+            <section id="tab-sweep" class="tab-pane">
+                <header class="tab-header">
+                    <h1>Parameter Sweep</h1>
+                    <p>Visualize how structural variations affect the optical response.</p>
+                </header>
+                <div class="tab-body" id="sweep-container">
+                    <!-- Dynamic content injected by tab4Sweep.js -->
+                </div>
+            </section>
+
+            <!-- TAB 5: Genetic Optimization -->
+            <section id="tab-optimization" class="tab-pane">
+                <header class="tab-header">
+                    <h1>Optimization</h1>
+                    <p>Optimize your structure to achieve the desired optical performance.</p>
+                </header>
+                <div class="tab-body" id="optimization-container">
+                    <!-- Dynamic content injected by tab5Optimization.js -->
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- App Entry Point (Vanilla JS Module) -->
+    <script type="module" src="js/app.js?v=52"></script>
+</body>
+</html>
