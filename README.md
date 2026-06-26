@@ -2,7 +2,7 @@
 **Advanced Computational Platform for Nanophotonics and SPR Sensor Design**
 ## Overview
 SPR Companion is an open-source, browser-based computational platform developed for the simulation, multidimensional analysis, and inverse design of planar multilayer nanophotonic structures. 
-The core simulation engine implements an analytical 4x4 Transfer Matrix Method (TMM), enabling the precise calculation of optical responses (reflectance, transmittance, absorptance) across complex stratified media. This includes support for isotropic and anisotropic materials, 2D materials, and porous effective mediums. Furthermore, the platform integrates heuristic and gradient-based machine learning algorithms to perform autonomous inverse design and multi-objective optimization of optical structures, specifically targeting Surface Plasmon Resonance (SPR) and Tamm plasmon polariton sensors.
+The core simulation engine implements an analytical Transfer Matrix Method (TMM), enabling the precise calculation of optical responses (reflectance, transmittance, absorptance) across complex stratified media. This includes support for isotropic and anisotropic materials, 2D materials, and porous effective mediums. Furthermore, the platform integrates heuristic and gradient-based machine learning algorithms to perform autonomous inverse design and multi-objective optimization of optical structures, specifically targeting Surface Plasmon Resonance (SPR) and Tamm plasmon polariton sensors.
 ## Core Capabilities
 ### 1. Database & Materials
 A flexible module for defining precise optical properties:
