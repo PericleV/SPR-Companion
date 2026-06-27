@@ -305,10 +305,18 @@ export class Evaluator {
             const targetLayerIdx = typeof metric.layerIdx !== 'undefined' ? metric.layerIdx : layers.length - 1; 
             const sensResponse = this.runSimulationSequence(layers, this.config.sim, { layerIdx: targetLayerIdx, deltaN: deltaN });
             
-            // Re-apply interval for sensitivity response to ensure valid comparison
-            const sSubX = sensResponse.x.subarray(startIndex, endIndex + 1);
-            const sSubR = sensResponse.R.subarray(startIndex, endIndex + 1);
-            const x2 = findTrueMin(sSubX, sSubR);
+            // Find the shifted peak. It might shift outside the original interval,
+            // so we search within a window around x1 to track the correct peak.
+            let x2 = x1;
+            let sSubX = sensResponse.x;
+            let sSubR = sensResponse.R;
+            
+            let sIdx = sSubX.findIndex(v => v >= x1 - 2);
+            let eIdx = sSubX.findIndex(v => v >= x1 + 10);
+            if (sIdx === -1) sIdx = 0;
+            if (eIdx === -1) eIdx = sSubX.length - 1;
+            
+            x2 = findTrueMin(sSubX.subarray(sIdx, eIdx + 1), sSubR.subarray(sIdx, eIdx + 1));
             
             return Math.abs((x2 - x1) / deltaN);
         }
@@ -335,10 +343,16 @@ export class Evaluator {
             this.config.materialsDB['_TEMP_SENS_'] = { type: 'constant', n: baseNk.n + deltaN, k: baseNk.k };
 
             const sensResponse = this.runSimulationSequence(sensLayers, this.config.sim);
-            const sSubX = sensResponse.x.subarray(startIndex, endIndex + 1);
-            const sSubR = sensResponse.R.subarray(startIndex, endIndex + 1);
-            const minIdx2 = sSubR.indexOf(Math.min(...sSubR));
-            const x2 = sSubX[minIdx2];
+            let sSubX = sensResponse.x;
+            let sSubR = sensResponse.R;
+            let sIdx = sSubX.findIndex(v => v >= x1 - 2);
+            let eIdx = sSubX.findIndex(v => v >= x1 + 10);
+            if (sIdx === -1) sIdx = 0;
+            if (eIdx === -1) eIdx = sSubX.length - 1;
+            
+            let subXR = sSubR.subarray(sIdx, eIdx + 1);
+            let minIdx2 = subXR.indexOf(Math.min(...subXR));
+            const x2 = sSubX.subarray(sIdx, eIdx + 1)[minIdx2];
             
             const sensitivity = Math.abs((x2 - x1) / deltaN);
             return fwhm > 0 ? sensitivity / fwhm : 0;

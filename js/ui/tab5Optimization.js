@@ -338,7 +338,7 @@ export const OptimizationManager = {
 
                         <div style="flex: 0 0 300px; min-width: 0; background: var(--bg-main); border-radius: 8px; display: flex; flex-direction: column; padding: 10px; flex-shrink: 0;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding: 0 10px;">
-                                <h4 style="color: var(--text-main); margin: 0; font-size: 0.9rem;">Fitness Convergence History</h4>
+                                <h4 id="opt-convergence-title" style="color: var(--text-main); margin: 0; font-size: 0.9rem;">Fitness Convergence History</h4>
                                 <button id="btn-csv-convergence" style="background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.75rem; transition: 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'"><i class="fa-solid fa-download"></i> CSV</button>
                             </div>
                             <div style="flex: 1; position: relative; min-width: 0; min-height: 0; width: 100%;">
@@ -432,6 +432,8 @@ export const OptimizationManager = {
             document.getElementById('btn-add-global-obj').style.display = isNsga2 ? 'block' : 'none';
             document.getElementById('opt-selection-type').parentElement.style.opacity = (isNsga2 || isPso || isGd) ? '0.5' : '1';
             document.getElementById('opt-selection-type').disabled = (isNsga2 || isPso || isGd); 
+            
+            this.checkObjectiveWarnings();
             
             const gaOptions = document.querySelectorAll('#opt-crossover-rate, #opt-crossover-eta, #opt-mutation-rate, #opt-mutation-eta');
             gaOptions.forEach(opt => {
@@ -921,7 +923,10 @@ export const OptimizationManager = {
                 return alert("The algorithm requires at least one global objective defined!");
             }
             newRow.remove();
+            this.checkObjectiveWarnings();
         });
+        
+        this.checkObjectiveWarnings();
 
         const formulaInput = newRow.querySelector('.gobj-formula');
         const goalSelect = newRow.querySelector('.gobj-goal');
@@ -942,6 +947,33 @@ export const OptimizationManager = {
         formulaInput.addEventListener('input', updateHint);
         goalSelect.addEventListener('change', updateHint);
         setTimeout(updateHint, 100);
+    },
+
+    checkObjectiveWarnings() {
+        const algo = document.getElementById('opt-algo-type').value;
+        const objCount = document.querySelectorAll('.global-obj-row').length;
+        let warningEl = document.getElementById('nsga2-objective-warning');
+        
+        if (!warningEl) {
+            warningEl = document.createElement('div');
+            warningEl.id = 'nsga2-objective-warning';
+            warningEl.style.marginTop = '10px';
+            warningEl.style.fontSize = '0.8rem';
+            warningEl.style.padding = '8px';
+            warningEl.style.borderRadius = '4px';
+            warningEl.style.background = 'rgba(255, 193, 7, 0.15)';
+            warningEl.style.border = '1px solid var(--accent-orange)';
+            warningEl.style.color = 'var(--text-main)';
+            warningEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-orange);"></i> <b>Note:</b> NSGA-II works best and visualizes best with 2 objectives. Using 3 or more objectives may slow down rendering and convergence.';
+            const container = document.getElementById('opt-global-obj-list').parentElement;
+            container.appendChild(warningEl);
+        }
+        
+        if (algo === 'nsga2' && objCount > 2) {
+            warningEl.style.display = 'block';
+        } else {
+            warningEl.style.display = 'none';
+        }
     },
 
     addConstraintRow() {
@@ -1365,7 +1397,7 @@ export const OptimizationManager = {
         this.populationHistory = [];
         document.getElementById('btn-export-population').style.display = 'none';
         
-        this.convergenceHistory = { x: [], y: [] };
+        this.convergenceHistory = { x: [], y: [], yMulti: [] };
         this.currentParetoFront = null;
         this.selectedParetoIndex = 0;
         
@@ -1518,13 +1550,30 @@ export const OptimizationManager = {
                     this.drawParetoPlot(config);
                     
                     this.convergenceHistory.x.push(msg.generation);
-                    this.convergenceHistory.y.push(sol.fitness || sol.objectives[0]);
+                    
+                    const bestObjs = [];
+                    config.globalObjectives.forEach((go, i) => {
+                        const rawBest = Math.min(...msg.paretoFront.map(s => s.objectives[i]));
+                        const isMax = go.goal === 'max';
+                        bestObjs.push(isMax ? Math.abs(rawBest) : rawBest);
+                    });
+                    
+                    if (!this.convergenceHistory.yMulti) this.convergenceHistory.yMulti = config.globalObjectives.map(() => []);
+                    bestObjs.forEach((val, i) => {
+                        if (!this.convergenceHistory.yMulti[i]) this.convergenceHistory.yMulti[i] = [];
+                        this.convergenceHistory.yMulti[i].push(val);
+                    });
+                    
+                    this.convergenceHistory.y.push(bestObjs[0]);
                 } 
                 else {
-                    document.getElementById('opt-status-text').innerHTML = `<i class="fa-solid fa-dna text-purple-alt"></i> Gen ${msg.generation} / ${config.generations} | Best Fitness: ${msg.bestFitness.toExponential(3)}`;
+                    const isMaximize = config.globalObjectives[0] && config.globalObjectives[0].goal === 'max';
+                    const displayFitness = isMaximize ? Math.abs(msg.bestFitness) : msg.bestFitness;
+                    
+                    document.getElementById('opt-status-text').innerHTML = `<i class="fa-solid fa-dna text-purple-alt"></i> Gen ${msg.generation} / ${config.generations} | Best Fitness: ${displayFitness.toExponential(3)}`;
                     
                     this.convergenceHistory.x.push(msg.generation);
-                    this.convergenceHistory.y.push(msg.bestFitness);
+                    this.convergenceHistory.y.push(displayFitness);
                     
                     this.bestResponse = msg.bestResponse;
                     this.bestGenomeRaw = msg.bestGenome;
@@ -1546,7 +1595,7 @@ export const OptimizationManager = {
 
                     this.updateFinalParametersUI();
                 this.drawResponsePlot(config);
-                this.drawConvergencePlot();
+                this.drawConvergencePlot(config);
             } 
             else if (msg.type === 'done') {
                 document.getElementById('btn-export-population').style.display = (this.populationHistory && this.populationHistory.length > 0) ? 'block' : 'none';
@@ -1567,6 +1616,7 @@ export const OptimizationManager = {
                 if (this.bestGenome) {
                     this.updateFinalParametersUI();
                     this.renderObjectivesComparison(config);
+                    this.drawConvergencePlot(config);
                     this.applyAndSaveOptimizedResult(config);
                 }
             }
@@ -1749,7 +1799,7 @@ export const OptimizationManager = {
             let valStr = valNum.toFixed(3);
             let extraInfo = '';
             
-            if (g.param === 'd' || g.param.includes('_d')) unit = ' nm';
+            if (g.param === 'd' || g.param.includes('_d')) { unit = ' nm'; valStr = valNum.toFixed(2); }
             if (g.param === 'count' || g.param.includes('periods') || g.param.includes('pos')) { unit = ''; valStr = Math.round(valNum).toString(); }
             if (g.param === 'ff') { unit = ''; }
             if (g.param === 'material' && g.allowedMaterials) {
@@ -1955,30 +2005,79 @@ export const OptimizationManager = {
         window.PlotRegistry['opt-response-graph'] = { data: JSON.parse(JSON.stringify(traces)), layout: JSON.parse(JSON.stringify(layout)) };
     },
 
-    drawConvergencePlot() {
+    drawConvergencePlot(config) {
         if (!this.convergenceHistory || this.convergenceHistory.x.length === 0) return;
 
-        const hasNegativeOrZero = this.convergenceHistory.y.some(v => v <= 0);
-        const yData = hasNegativeOrZero ? this.convergenceHistory.y : this.convergenceHistory.y.map(v => Math.max(1e-10, v));
-        const yType = hasNegativeOrZero ? 'linear' : 'log';
-
-        const traces = [{
-            x: this.convergenceHistory.x,
-            y: yData,
-            name: 'Optimized Fitness',
-            type: 'scatter',
-            mode: 'lines+markers',
-            line: { color: window.getCSSColor('--color-success'), width: 2 },
-            marker: { size: 6, color: window.getCSSColor('--accent-blue') }
-        }];
         const tc = window.getPlotThemeColors();
+        let traces = [];
+        let yType = 'log';
+        let yAxisTitle = 'Fitness Error (Lower is Better)';
+        let showLegend = false;
+
+        const isNSGA2 = config && config.algoType === 'nsga2';
+        const titleEl = document.getElementById('opt-convergence-title');
+
+        if (isNSGA2 && this.convergenceHistory.yMulti && this.convergenceHistory.yMulti.length > 0) {
+            if (titleEl) titleEl.innerText = 'Objective Extremes';
+            yAxisTitle = 'Objective Extremes';
+            let allVals = [];
+            showLegend = true;
+            
+            traces = this.convergenceHistory.yMulti.map((yArr, i) => {
+                const go = config.globalObjectives[i];
+                const isMaximize = go && go.goal === 'max';
+                allVals.push(...yArr);
+                
+                const hasNegativeOrZero = yArr.some(v => v <= 0);
+                const yData = (hasNegativeOrZero || isMaximize) ? [...yArr] : yArr.map(v => Math.max(1e-10, v));
+                
+                const colors = [window.getCSSColor('--color-success'), window.getCSSColor('--accent-blue'), window.getCSSColor('--accent-orange'), window.getCSSColor('--color-danger')];
+                const c = colors[i % colors.length];
+
+                return {
+                    x: [...this.convergenceHistory.x],
+                    y: yData,
+                    name: `Best Obj ${i+1}`,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: c, width: 2 }
+                };
+            });
+            
+            const hasNegativeOrZeroGlobal = allVals.some(v => v <= 0);
+            const anyMaximize = config.globalObjectives.some(go => go.goal === 'max');
+            yType = (hasNegativeOrZeroGlobal || anyMaximize) ? 'linear' : 'log';
+        } else {
+            if (titleEl) titleEl.innerText = 'Fitness Convergence History';
+            const isMaximize = config && config.globalObjectives && config.globalObjectives[0] && config.globalObjectives[0].goal === 'max';
+            yAxisTitle = isMaximize ? 'Objective Value (Higher is Better)' : 'Fitness Error (Lower is Better)';
+
+            const hasNegativeOrZero = this.convergenceHistory.y.some(v => v <= 0);
+            const yData = (hasNegativeOrZero || isMaximize) ? [...this.convergenceHistory.y] : this.convergenceHistory.y.map(v => Math.max(1e-10, v));
+            yType = (hasNegativeOrZero || isMaximize) ? 'linear' : 'log';
+
+            traces = [{
+                x: [...this.convergenceHistory.x],
+                y: yData,
+                name: 'Optimized Fitness',
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: { color: window.getCSSColor('--color-success'), width: 2 },
+                marker: { size: 6, color: window.getCSSColor('--accent-blue') }
+            }];
+        }
+
         const layout = {
             paper_bgcolor: tc.bg, plot_bgcolor: tc.bg, font: { color: tc.text },
             xaxis: { title: 'Generation', gridcolor: tc.grid, zerolinecolor: tc.grid, rangemode: 'tozero' },
-            yaxis: { title: 'Fitness Error (Lower is Better)', type: yType, gridcolor: tc.grid, zerolinecolor: tc.grid, exponentformat: 'e' },
+            yaxis: { title: yAxisTitle, type: yType, gridcolor: tc.grid, zerolinecolor: tc.grid, exponentformat: 'e' },
             margin: { t: 30, r: 20, l: 60, b: 40 },
-            showlegend: false
+            showlegend: showLegend
         };
+
+        if (isNSGA2) {
+            layout.legend = { orientation: 'h', y: 1.1, x: 0.5, xanchor: 'center' };
+        }
 
         Plotly.react('opt-convergence-graph', traces, layout);
         
