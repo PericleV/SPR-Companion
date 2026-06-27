@@ -1,5 +1,5 @@
 import { DefaultMaterials } from '../data/default_materials.js?v=53';
-import { MaterialsDB } from '../core/materials_database.js?v=53';
+import { MaterialsDB, initMaterialsDB } from '../core/materials_database.js?v=53';
 import { MaterialFormulas } from '../physics/materialsFormulas.js';
 
 // --- Complex Numbers Helpers (needed for EMA Bruggeman/MG calculations) ---
@@ -495,7 +495,9 @@ export const MaterialsManager = {
                 delete this.db[this.selectedMaterial];
                 
                 this.saveToStorage();
-                document.dispatchEvent(new CustomEvent('materialsUpdated'));
+                initMaterialsDB().then(() => {
+                    document.dispatchEvent(new CustomEvent('materialsUpdated'));
+                });
                 
                 this.selectedMaterial = 'BK7';
                 this.plottedMaterials.add(this.selectedMaterial);
@@ -539,8 +541,11 @@ export const MaterialsManager = {
                     }
                     if (count > 0) {
                         this.saveToStorage();
-                        this.renderMaterialList();
-                        alert(`Successfully imported ${count} material(s).`);
+                        initMaterialsDB().then(() => {
+                            document.dispatchEvent(new CustomEvent('materialsUpdated'));
+                            this.renderMaterialList();
+                            alert(`Successfully imported ${count} material(s).`);
+                        });
                     } else {
                         alert("Invalid material JSON format.");
                     }
@@ -564,7 +569,9 @@ export const MaterialsManager = {
                     delete this.db[this.selectedMaterial];
                     
                     this.saveToStorage();
-                    document.dispatchEvent(new CustomEvent('materialsUpdated'));
+                    initMaterialsDB().then(() => {
+                        document.dispatchEvent(new CustomEvent('materialsUpdated'));
+                    });
                     
                     this.selectedMaterial = 'BK7';
                     this.plottedMaterials.add(this.selectedMaterial);
@@ -1316,7 +1323,9 @@ export const MaterialsManager = {
         this.db[name] = newMat;
         this.saveToStorage();
         
-        document.dispatchEvent(new CustomEvent('materialsUpdated'));
+        initMaterialsDB().then(() => {
+            document.dispatchEvent(new CustomEvent('materialsUpdated'));
+        });
         
         document.getElementById('add-mat-modal').style.display = 'none';
         document.getElementById('new-mat-name').value = '';

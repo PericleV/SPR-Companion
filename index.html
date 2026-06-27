@@ -120,10 +120,11 @@
                         <div class="tutorial-step-row" style="align-items: center; border-left: 4px solid var(--border-color);">
                             <div class="tutorial-step-content" style="padding-left: 10px;">
                                 <div class="tutorial-step-title" style="font-size: 1.25rem;"><a href="#" onclick="document.querySelector('[data-target=\'tab-materials\']').click(); return false;" style="color: var(--text-main); text-decoration: underline; text-decoration-color: var(--border-color); text-underline-offset: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-blue)'" onmouseout="this.style.color='var(--text-main)'"><i class="fa-solid fa-flask" style="margin-right: 8px; color: var(--text-muted);"></i>Database & Materials</a></div>
-                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Define the exact optical properties for the layers in your stack.</p>
+                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Visualize and manage optical parameters (n, k, permittivity) across various wavelengths.</p>
                                 <ul style="color: var(--text-main); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
-                                    <li><strong>Material Types:</strong> Standard bulk media, 2D materials, and porous effective mediums.</li>
-                                    <li><strong>Data Import:</strong> Constant index (n, k), Tabulated dispersive data (CSV), Analytic models (Drude, Sellmeier), or directly digitize data from literature plots using the built-in Digitizer.</li>
+                                    <li><strong>Properties:</strong> Choose from constant, dispersive, or analytical formulas (Drude, Drude-Lorentz-Kubo). Superimpose multiple materials.</li>
+                                    <li><strong>Data Import:</strong> Import from CSV (refractiveindex.info) or digitize data directly from images. Features auto-interpolation (spline/linear) and extrapolation.</li>
+                                    <li><strong>Material Types:</strong> Standard Bulk, Porous (define host, inclusion, Fill Factor, and EMA: Bruggeman/Maxwell Garnett), and 2D Materials (define layer thickness).</li>
                                 </ul>
                             </div>
                         </div>
@@ -132,10 +133,11 @@
                         <div class="tutorial-step-row" style="align-items: center; border-left: 4px solid var(--border-color);">
                             <div class="tutorial-step-content" style="padding-left: 10px;">
                                 <div class="tutorial-step-title" style="font-size: 1.25rem;"><a href="#" onclick="document.querySelector('[data-target=\'tab-geometry\']').click(); return false;" style="color: var(--text-main); text-decoration: underline; text-decoration-color: var(--border-color); text-underline-offset: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-green)'" onmouseout="this.style.color='var(--text-main)'"><i class="fa-solid fa-layer-group" style="margin-right: 8px; color: var(--text-muted);"></i>Geometry Design</a></div>
-                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Construct the physical multilayer stack from your defined materials.</p>
+                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Construct and visualize the simulation stack with export capabilities (PNG/SVG).</p>
                                 <ul style="color: var(--text-main); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
-                                    <li><strong>Customization:</strong> Build arbitrary layer sequences, from simple Kretschmann configurations to complex Distributed Bragg Reflectors (DBRs).</li>
-                                    <li><strong>Export & Import:</strong> Save your entire geometry configuration as a workspace file to easily load and share your designs later.</li>
+                                    <li><strong>Configuration:</strong> Load/save configs, add/remove layers, and click to apply Reverse Illumination.</li>
+                                    <li><strong>Auto DBR Builder:</strong> Instantly generate Distributed Bragg Reflectors by defining materials, thicknesses, periods, and defects.</li>
+                                    <li><strong>Smart Detection:</strong> Automatically detects material types, seamlessly handling 2D materials and layer counts.</li>
                                 </ul>
                             </div>
                         </div>
@@ -144,10 +146,11 @@
                         <div class="tutorial-step-row" style="align-items: center; border-left: 4px solid var(--border-color);">
                             <div class="tutorial-step-content" style="padding-left: 10px;">
                                 <div class="tutorial-step-title" style="font-size: 1.25rem;"><a href="#" onclick="document.querySelector('[data-target=\'tab-simulation\']').click(); return false;" style="color: var(--text-main); text-decoration: underline; text-decoration-color: var(--border-color); text-underline-offset: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--color-warning)'" onmouseout="this.style.color='var(--text-main)'"><i class="fa-solid fa-chart-line" style="margin-right: 8px; color: var(--text-muted);"></i>Setup & Simulation</a></div>
-                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Run fast, analytical Transfer Matrix Method (TMM) calculations.</p>
+                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Establish parameters for Angular or Spectral interrogation.</p>
                                 <ul style="color: var(--text-main); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
-                                    <li><strong>Interrogation Modes:</strong> Perform both Angular (fixed wavelength) and Spectral (fixed angle) interrogations.</li>
-                                    <li><strong>Analysis:</strong> Automatic curve fitting to identify resonance dips and extraction of critical performance parameters (Sensitivity, FWHM, Figure of Merit).</li>
+                                    <li><strong>Outputs & Metrics:</strong> Calculate R, T, A, phiR, phiT. Track FWHM, Min Res, Bandgap, and Sensitivity (customize delta n and select specific active layers).</li>
+                                    <li><strong>Advanced Analysis:</strong> Define Regions of Interest (ROI) for multiple peaks. Fit curves using Lorentz, Fano, or Coupled Oscillators.</li>
+                                    <li><strong>Field Distribution:</strong> Visualize field intensity through the sensor depth. Export all results to CSV.</li>
                                 </ul>
                             </div>
                         </div>
@@ -156,10 +159,10 @@
                         <div class="tutorial-step-row" style="align-items: center; border-left: 4px solid var(--border-color);">
                             <div class="tutorial-step-content" style="padding-left: 10px;">
                                 <div class="tutorial-step-title" style="font-size: 1.25rem;"><a href="#" onclick="document.querySelector('[data-target=\'tab-sweep\']').click(); return false;" style="color: var(--text-main); text-decoration: underline; text-decoration-color: var(--border-color); text-underline-offset: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--color-purple)'" onmouseout="this.style.color='var(--text-main)'"><i class="fa-solid fa-sliders" style="margin-right: 8px; color: var(--text-muted);"></i>Parameter Sweep</a></div>
-                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Visualize how structural variations affect the optical response.</p>
+                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Analyze responses by sweeping single or multiple parameters (1D/2D).</p>
                                 <ul style="color: var(--text-main); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
-                                    <li>Vary any geometric or material parameter systematically to observe trends.</li>
-                                    <li>Generate high-resolution 2D heatmaps and trace dispersion curves to locate optimal coupling regimes.</li>
+                                    <li><strong>Sweep Types:</strong> Perform Fast Single Point scans, or comprehensive Angle/Wavelength Scans to extract performance metrics.</li>
+                                    <li><strong>Visualization:</strong> Generate 2D heatmaps, dispersion curves, and calculate performance matrices across parameter combinations.</li>
                                 </ul>
                             </div>
                         </div>
@@ -168,10 +171,11 @@
                         <div class="tutorial-step-row" style="align-items: center; margin-bottom: 40px; border-left: 4px solid var(--border-color);">
                             <div class="tutorial-step-content" style="padding-left: 10px;">
                                 <div class="tutorial-step-title" style="font-size: 1.25rem;"><a href="#" onclick="document.querySelector('[data-target=\'tab-optimization\']').click(); return false;" style="color: var(--text-main); text-decoration: underline; text-decoration-color: var(--border-color); text-underline-offset: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--color-danger)'" onmouseout="this.style.color='var(--text-main)'"><i class="fa-solid fa-wand-magic-sparkles" style="margin-right: 8px; color: var(--text-muted);"></i>Optimization</a></div>
-                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Optimize your structure to achieve the desired optical performance.</p>
+                                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">Optimize the structure using SOGA, NSGA-II, PSO, or Gradient Descent.</p>
                                 <ul style="color: var(--text-main); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
-                                    <li><strong>Algorithms:</strong> Single-Objective GA (SOGA), Multi-Objective NSGA-II, Particle Swarm Optimization (PSO), and Gradient Descent with ADAM.</li>
-                                    <li><strong>Flexibility:</strong> Define multiple objectives concurrently, apply strict constraints, combine performance metrics, or fit the structure to a target optical curve.</li>
+                                    <li><strong>Variables:</strong> Optimize thickness, material choices (scrambler), DBR periods, 2D layer count, and Porous FF.</li>
+                                    <li><strong>Objectives:</strong> Target global/local reflectivity, FWHM, Sensitivity, or use curve fitting. Build composite objectives with constraints.</li>
+                                    <li><strong>Integration:</strong> Select Pareto front solutions (NSGA-II) and auto-load optimized geometries directly into the designer.</li>
                                 </ul>
                             </div>
                         </div>

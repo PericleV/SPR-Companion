@@ -840,21 +840,16 @@ export const OptimizationManager = {
             if (type === 'curvefit') curvefitDiv.style.display = 'flex';
             else curvefitDiv.style.display = 'none';
 
-            if (type === 'Sensitivity' || type === 'FOM' || type === 'curvefit') {
-                intervalDiv.style.display = 'none';
-                intervalDiv.innerHTML = `<input type="hidden" class="metric-xmin" value="0"><input type="hidden" class="metric-xmax" value="0">`;
-            } else {
-                intervalDiv.style.display = 'flex';
-                intervalDiv.style.flexWrap = 'wrap'; 
-                intervalDiv.innerHTML = `
-                    <span style="font-size: 0.75rem; color: var(--text-muted); width: 65px; white-space: nowrap;">Apply on X:</span>
-                    <div style="display: flex; gap: 5px; flex: 1; min-width: 120px;">
-                        <input type="number" class="metric-xmin" value="0" style="flex: 1; min-width: 0; padding: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.8rem; text-align: center;">
-                        <span style="color: var(--text-muted); display: flex; align-items: center;">-</span>
-                        <input type="number" class="metric-xmax" value="90" style="flex: 1; min-width: 0; padding: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.8rem; text-align: center;">
-                    </div>
-                `;
-            }
+            intervalDiv.style.display = 'flex';
+            intervalDiv.style.flexWrap = 'wrap'; 
+            intervalDiv.innerHTML = `
+                <span style="font-size: 0.75rem; color: var(--text-muted); width: 65px; white-space: nowrap;">Apply on X:</span>
+                <div style="display: flex; gap: 5px; flex: 1; min-width: 120px;">
+                    <input type="number" class="metric-xmin" value="0" style="flex: 1; min-width: 0; padding: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.8rem; text-align: center;">
+                    <span style="color: var(--text-muted); display: flex; align-items: center;">-</span>
+                    <input type="number" class="metric-xmax" value="90" style="flex: 1; min-width: 0; padding: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.8rem; text-align: center;">
+                </div>
+            `;
             this.updateTargetMetricDropdown();
         };
 
@@ -1677,8 +1672,8 @@ export const OptimizationManager = {
                             finalMat = g.allowedMaterials[matIdx];
                         }
                         layer.material = finalMat;
-                        if (window.MaterialsDB && window.MaterialsDB[finalMat]) {
-                            layer.type = window.MaterialsDB[finalMat].category || 'standard';
+                        if (MaterialsDB && MaterialsDB[finalMat]) {
+                            layer.type = MaterialsDB[finalMat].category || 'standard';
                         }
                         delete layer.n_override;
                         delete layer.k_override;
@@ -1963,9 +1958,13 @@ export const OptimizationManager = {
     drawConvergencePlot() {
         if (!this.convergenceHistory || this.convergenceHistory.x.length === 0) return;
 
+        const hasNegativeOrZero = this.convergenceHistory.y.some(v => v <= 0);
+        const yData = hasNegativeOrZero ? this.convergenceHistory.y : this.convergenceHistory.y.map(v => Math.max(1e-10, v));
+        const yType = hasNegativeOrZero ? 'linear' : 'log';
+
         const traces = [{
             x: this.convergenceHistory.x,
-            y: this.convergenceHistory.y.map(v => Math.max(1e-10, v)),
+            y: yData,
             name: 'Optimized Fitness',
             type: 'scatter',
             mode: 'lines+markers',
@@ -1976,7 +1975,7 @@ export const OptimizationManager = {
         const layout = {
             paper_bgcolor: tc.bg, plot_bgcolor: tc.bg, font: { color: tc.text },
             xaxis: { title: 'Generation', gridcolor: tc.grid, zerolinecolor: tc.grid, rangemode: 'tozero' },
-            yaxis: { title: 'Fitness Error (Lower is Better)', type: 'log', gridcolor: tc.grid, zerolinecolor: tc.grid, exponentformat: 'e' },
+            yaxis: { title: 'Fitness Error (Lower is Better)', type: yType, gridcolor: tc.grid, zerolinecolor: tc.grid, exponentformat: 'e' },
             margin: { t: 30, r: 20, l: 60, b: 40 },
             showlegend: false
         };
