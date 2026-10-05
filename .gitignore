@@ -1,0 +1,23 @@
+logs
+*.log
+npm-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+# not for the repository: articles (copyrighted), our own notes, plans and the assistant's files
+*.pdf
+CLAUDE.md
+docs/
+notes/
+*.notes.md
+ROADMAP*.md
+.claude/
+scripts/_*
